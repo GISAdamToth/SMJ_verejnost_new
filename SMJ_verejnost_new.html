@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Nová mapa pro veřejnost</title>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.24/esri/themes/light/main.css" />
+	<link rel="stylesheet" href="style.css">
+    <script src="https://js.arcgis.com/4.24/"></script>
+
+    <script>
+      require(["esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer"], function(Map, MapView, FeatureLayer) {
+        const map = new Map({
+          //basemap: "dark-gray-vector"
+		  basemap: "topo-vector"
+		  //basemap: "https://gis.jihlava-city.cz/server/rest/services/basemaps/ORP_zabaged/MapServer"
+		});
+		
+		<!-- mapimage a tilelayer skusit basemapy -->
+
+        const view = new MapView({
+          container: "sceneDiv",
+          map: map,
+		  popup: {
+            dockEnabled: true,
+            dockOptions: {
+              buttonEnabled: true,
+			  breakpoint: false,
+              position: "top-right"
+            }
+          },
+          center: [15.59144, 49.39455],
+          zoom: 13.5,
+          padding: {
+            right: 300
+          }
+        });
+
+        const listNode = document.getElementById("nyc_graphics");
+
+        /********************
+         * Add feature layer
+         ********************/
+
+        // Create the PopupTemplate
+		const popupOdstavky = {
+			title: "{porucha_typ} – {porucha_stav}",
+			content: [
+				{
+					type: "text",
+					text: "<p>předpokládaná doba opravy: {oprava_zahajeni} - {opravda_ukonceni}</p>" +
+					      "<p>předpokládaná doba odstávky vody: {oprava_odstavka_od} - {oprava_odstavka_do}</p>" +
+						  "<p>dotčené adresy: {oprava_adresy_omezene}</p>" +
+						  "<p>náhradní zásobování: {oprava_nahradni_zasobovani}</p>"
+				}
+			]
+		};
+		
+		const popupHydranty = {
+			title: "hydrant {objectid}",
+			content: [
+				{
+					type: "text",
+					text: "<p>datum odkalení: {d_odkaleni}</p>" +
+						  "<p>souhrn provozních záznamů: {souhrn_provoz}</p>"
+				}
+			]
+        };
+		
+		const popupCisterny = {
+          title: "Cisterna {objectid}",
+          content: [
+            {
+              type: "fields",
+              fieldInfos: [
+                {
+                  fieldName: "objem",
+                  label: "Objem",
+                  format: {
+                    places: 0,
+                    digitSeparator: true
+                  }
+                },
+				{
+                  fieldName: "pristaveno_od",
+                  label: "Pristavena od: ",
+                  format: {
+                    places: 0,
+                    digitSeparator: true
+                  }
+                },
+				{
+                  fieldName: "pristaveno_do",
+                  label: "Pristavena do: ",
+                  format: {
+                    places: 0,
+                    digitSeparator: true
+                  }
+                }
+              ]
+            }
+          ]
+        };
+		
+		const popupOdstaveneNehnutelnosti = {
+          title: "{adresa}",
+          content: [
+            {
+              type: "fields",
+              fieldInfos: [
+                {
+                  fieldName: "stav",
+                  label: "Stav",
+                  format: {
+                    places: 0,
+                    digitSeparator: true
+                  }
+                },
+				{
+                  fieldName: "odstaveni_od",
+                  label: "Odstavka vody od: ",
+                  format: {
+                    places: 0,
+                    digitSeparator: true
+                  }
+                },
+				{
+                  fieldName: "odstaveni_do",
+                  label: "Odstavka vody do: ",
+                  format: {
+                    places: 0,
+                    digitSeparator: true
+                  }
+                },
+				{
+                  fieldName: "pocet_obyvatel",
+                  label: "Pocet obmedzenych obyvatelov: ",
+                  format: {
+                    places: 0,
+                    digitSeparator: true
+                  }
+                }
+              ]
+            }
+          ]
+        };
+
+        // Create the FeatureLayer using the popupTemplate
+		
+		const opravy = new FeatureLayer({
+          url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/1",
+          outFields: ["porucha_typ", "objectid"], // used by queryFeatures
+          popupTemplate: popupOdstavky
+        });
+        map.add(opravy);
+        
+		const planovane_odstavky = new FeatureLayer({
+          url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/2",
+          outFields: ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene"], // used by queryFeatures
+          popupTemplate: popupOdstavky
+        });
+        map.add(planovane_odstavky);
+		
+		const odkaleni_hydrantu = new FeatureLayer({
+          url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/3",
+          outFields: ["objectid", "d_odkaleni"], // used by queryFeatures
+          popupTemplate: popupHydranty
+        });
+        map.add(odkaleni_hydrantu);
+		
+		const info_obcany = new FeatureLayer({
+          url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/8",
+          outFields: ["porucha_typ", "objectid"], // used by queryFeatures
+          popupTemplate: popupOdstavky
+        });
+        map.add(info_obcany);
+		
+		const cisterny = new FeatureLayer({
+          url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/5",
+          outFields: ["objectid", "poznamka"], // used by queryFeatures
+          popupTemplate: popupCisterny
+        });
+        map.add(cisterny);
+		
+		const odstavene_nehnutelnosti = new FeatureLayer({
+          url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/6",
+          outFields: ["objectid", "adresa"], // used by queryFeatures
+          popupTemplate: popupOdstaveneNehnutelnosti
+        });
+        map.add(odstavene_nehnutelnosti);
+		
+		opravy.queryFeatureCount().then(function(numFeatures){
+        document.getElementById("distanceDiv").innerHTML = "<p>" + numFeatures + "</p>";
+		});
+		
+		planovane_odstavky.queryFeatureCount().then(function(numFeatures){
+        document.getElementById("distanceDiv1").innerHTML = "<p>" + numFeatures + "</p>";
+		});
+		
+		odkaleni_hydrantu.queryFeatureCount().then(function(numFeatures){
+        document.getElementById("distanceDiv2").innerHTML = "<p>" + numFeatures + "</p>";
+		});
+		
+		info_obcany.queryFeatureCount().then(function(numFeatures){
+        document.getElementById("distanceDiv3").innerHTML = "<p>" + numFeatures + "</p>";
+		});
+
+		//const vrstvy = [opravy, planovane_odstavky];
+
+        let graphics;
+		
+		//for (let j = 0; j < vrstvy.length; j++) {
+			//view.whenLayerView(vrstvy[j]).then(function(layerView) {
+			view.whenLayerView(planovane_odstavky).then(function(layerView) {
+			  layerView.watch("updating", function(value) {
+				if (!value) {
+				  // wait for the layer view to finish updating
+
+				  // query all the features available for drawing.
+				  layerView
+					.queryFeatures({
+					  geometry: view.extent,
+					  returnGeometry: true,
+					  orderByFields: ["oprava_zahajeni"]
+					})
+					.then(function(results) {
+					  graphics = results.features;
+
+					  const fragment = document.createDocumentFragment();
+					  
+					  let i = 0;
+					  const ulica = [];
+					  graphics.forEach(function(result, index) {  
+						const attributes = result.attributes;
+
+						if (attributes.oprava_adresy_omezene != null) {
+							novyPrvok = attributes.oprava_adresy_omezene;
+							commaPos = novyPrvok.indexOf(",");
+							if (commaPos > -1){
+								novyPrvok = novyPrvok.substring(0, commaPos);
+							} 
+							lspacePos = novyPrvok.lastIndexOf(" ");
+							ulica[i] = novyPrvok.substring(0, lspacePos);
+						} else {
+							ulica[i] = "nezadaná";
+						}
+						
+						var startDatume = new Date(attributes.oprava_zahajeni);
+						var endDatume = new Date(attributes.opravda_ukonceni);
+						let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + startDatume.getMinutes() + "0";
+						let endString = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear() + " " + endDatume.getHours() + ":" + endDatume.getMinutes() + "0";
+						
+						const name = attributes.porucha_typ + " (ulice " + ulica[i] + "): od " + startString + " do " + endString;
+						i += 1;
+						
+						// Create a list zip codes in NY
+						const li = document.createElement("li");
+						li.classList.add("panel-result");
+						li.tabIndex = 0;
+						li.setAttribute("data-result-id", index);
+						li.textContent = name;
+
+						fragment.appendChild(li);
+					  });
+					  //document.getElementById("testik").innerHTML = ulica;
+					  // Empty the current list
+					  listNode.innerHTML = "";
+					  listNode.appendChild(fragment);
+					})
+					.catch(function(error) {
+					  console.error("query failed: ", error);
+					});
+				}
+			  });
+			});
+		//}
+		
+        // listen to click event on the zip code list
+        listNode.addEventListener("click", onListClickHandler);
+
+        function onListClickHandler(event) {
+          const target = event.target;
+          const resultId = target.getAttribute("data-result-id");
+
+          // get the graphic corresponding to the clicked zip code
+          const result = 
+			resultId && graphics && graphics[parseInt(resultId, 10)];
+
+          if (result) {
+            // open the popup at the centroid of zip code polygon
+            // and set the popup's features which will populate popup content and title.
+
+            view
+				//.goTo(result.geometry.extent.expand(2))   // extent a expand su pre polygonove vrstvy
+				.goTo(result.geometry)						// pre bodovu vrstvu musi byt iba result.geometry
+				.then(function() {							// este musim vymysliet, aby sa to prizoomovalo k tej odstavke
+					view.popup.open({
+						features: [result],
+						location: result.geometry.centroid
+					});
+				})
+            .catch(function(error){
+              if (error.name != "AbortError"){
+                console.error(error);
+              }
+            });
+          }
+        }
+      });
+    </script>
+	
+  </head>
+
+  <body>
+    <div class="panel-container">
+      <div class="panel-side esri-widget">
+        <!-- <h3>Opravy</h3>     -->
+        <!-- <ul id="nyc_graphics"> -->
+          <!-- <li>Loading&hellip;</li> -->
+        <!-- </ul> -->
+		<h3>Plánované odstávky</h3>    
+        <ul id="nyc_graphics">
+          <li>Loading&hellip;</li>
+        </ul>
+      </div>
+
+      <div id="sceneDiv">
+	  </div>
+	  
+	  <div id="paneDiv">
+		  <p>
+			Počet oprav:
+		  </p>
+		  <div id="distanceDiv"></div>
+		  <p>
+			Počet plánovaných odstávek:
+		  </p>
+		  <div id="distanceDiv1"></div>
+		  <p>
+			Počet odkalení hydrantů:
+		  </p>
+		  <div id="distanceDiv2"></div>
+		  <p>
+			Počet info pro občany:
+		  </p>
+		  <div id="distanceDiv3"></div>
+	  </div>
+	  
+	  <!-- <div> -->
+		<!-- <p id="testik"></p> -->
+	  <!-- </div> -->
+	  
+    </div>
+  </body>
+</html>

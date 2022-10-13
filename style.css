@@ -1,0 +1,94 @@
+html,body,
+      #sceneDiv {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+	  
+	  #paneDiv {
+        position: absolute;
+        top: 15px;
+        left: 50px;
+        width: 110px;
+        padding: 5px 12px 5px 12px;
+        background-color: rgba(255, 255, 255, 0.85);
+        color: black;
+				text-align: center;			
+      }
+
+      #distanceDiv p {
+        padding: 0;
+        margin: 0.2em;
+        font-size: 2em;
+        text-align: center;
+      }
+	  
+	  #distanceDiv1 p {
+        padding: 0;
+        margin: 0.2em;
+        font-size: 2em;
+        text-align: center;
+      }
+	  
+	  #distanceDiv2 p {
+        padding: 0;
+        margin: 0.2em;
+        font-size: 2em;
+        text-align: center;
+      }
+	  
+	  #distanceDiv3 p {
+        padding: 0;
+        margin: 0.2em;
+        font-size: 2em;
+        text-align: center;
+      }
+
+      .panel-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+
+      .panel-side {
+        padding: 2px;
+        box-sizing: border-box;
+        width: 280px;
+        height: 96%;
+        position: absolute;
+        top: 15px;
+        right: 10px;
+        color: #fff;
+        background-color: rgba(0, 0, 0, 0.6);
+        overflow: auto;
+        z-index: 60;
+      }
+
+      .panel-side h3 {
+        padding: 0 20px;
+        margin: 20px 0;
+      }
+
+      .panel-side ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .panel-side li {
+        list-style: none;
+        padding: 10px 20px;
+      }
+
+      .panel-result {
+        cursor: pointer;
+        margin: 2px 0;
+        background-color: rgba(0, 0, 0, 0.3);
+      }
+
+      .panel-result:hover,
+      .panel-result:focus {
+        color: orange;
+        background-color: rgba(0, 0, 0, 0.75);
+      }
