@@ -51,8 +51,9 @@
         });
 
         const view = new MapView({
-          container: "sceneDiv",
-          map: webmap,
+          //container: "sceneDiv",
+          container: "viewDiv",
+		  map: webmap,
 		  popup: {
             dockEnabled: false,   // dockEnabled riadi, ci sa popup zobrazi na kliknutom prvku alebo na dock position, ktora je nastavena
             dockOptions: {
@@ -61,11 +62,11 @@
               position: "bottom-left"
             }
           },
-          center: [15.58, 49.3999],
+          center: [15.605, 49.405],
           zoom: 3,
-          padding: {
-            right: 300
-          }
+          <!-- padding: { -->
+            <!-- right: 300 -->
+          <!-- } -->
         });
 		
 		// legenda
@@ -79,6 +80,7 @@
 		});
 		view.ui.add(legend, "top-left");	
 		
+		// search widget
 		var searchWidget = new Search({
 		  view: view,
 		  expanded: false
@@ -88,6 +90,8 @@
 		  index: 0
 		});
 		
+		
+				
 		// nacital som si 4 feature layers, ktore potrebujem mat v pocitadle prvkov a v bocnom zozname
 		// tieto vrstvy su uz vo webmape, len neviem s nimi pracovat
 		// zatial pracujem len s vrstvou planovane odstavky
@@ -137,29 +141,21 @@
 			console.log(info_obcany_sublayer.title);
 
 
-			const opravy = opravy_sublayer /* new FeatureLayer({
-			url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/1",
-			}); */
-			opravy_sublayer.outFields = ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene", "porucha_misto"]
+			const opravy = opravy_sublayer;
+			opravy_sublayer.outFields = ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene", "porucha_misto"];
 
-			
-			const planovane_odstavky = planovane_odstavky_sublayer /* new FeatureLayer({
-			url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/2",
-			outFields: ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene"],
-			popupTemplate: popupOdstavky
-			}); */
-			planovane_odstavky_sublayer.outFields = ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene", "porucha_misto"]
+			const planovane_odstavky = planovane_odstavky_sublayer;
+			planovane_odstavky_sublayer.outFields = ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene", "porucha_misto"];
 	
-			const odkaleni_hydrantu = odkaleni_hydrantu_sublayer /* new FeatureLayer({
-			url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/3"
-			}); */
+			const odkaleni_hydrantu = odkaleni_hydrantu_sublayer;
+			opravy_sublayer.outFields = ["objectid", "souhrn_provoz", "d_odkaleni"];
 			
-			const info_obcany = info_obcany_sublayer /* new FeatureLayer({
-			url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/8"
-			}); */
+			const info_obcany = info_obcany_sublayer;
+			info_obcany_sublayer.outFields = ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene", "porucha_misto"];
 			console.log(opravy.title);
 
 			var vrstvy = [opravy, planovane_odstavky];
+			
 			var pocty = [];
 			
 			// Tím, že pracuješ se sublayers, nemůžeš použít metodu queryFeatureCount() , ale můžeš to vyřešit
@@ -179,8 +175,11 @@
 			info_obcany.queryFeatures({where: "1=1", outFields: ["*"]}).then(function(result){
 				pocty[3] = result.features.length;
 				suma = pocty[0] + pocty[1] + pocty[2] + pocty[3]; 
+				pocet_udalosti = pocty[0] + pocty[1] + pocty[2];
+				if (pocet_udalosti == null) {          //"Nan"
+					pocet_udalosti = "refresh page";
+				}
 				
-				// udalosti: jedno cislo, odkaleni hydrantu: druhe cislo
 				// bocny panel oseknut na polovicu a pocitadlo supnut pod to alebo nad to
 				// ak bude viac udalosti, tak dat scrollbar
 				//vytvorenie pocitadla ako rozbalovacieho panela
@@ -188,15 +187,15 @@
 				view: view,
 				expanded: true,
 				iconNumber: suma,
-				content: '<div class="counterDiv"><p>Počet oprav: <div class="pocitadlo">' + pocty[0] + '</div></p>' + 
-						 '<p>Počet plánovaných odstávek: <div class="pocitadlo">' + pocty[1] + '</div></p>' + 
-						 '<p>Počet odkalení hydrantů: <div class="pocitadlo">' + pocty[2] + '</div></p>' + 
+				content: '<div class="counterDiv"><p>Počet událostí: <div class="pocitadlo">' + pocet_udalosti + '</div></p>' +  
 						 '<p>Počet info pro občany: <div class="pocitadlo">' + pocty[3] + '</div></p></div>'
 				});
-				view.ui.add(pocitadlo, "bottom-right");
+				//view.ui.add(pocitadlo, "bottom-right");
+				view.ui.add(pocitadlo, "top-right");
 			});
 			
 			//for (let x = 0; x < vrstvy.length; x++) {
+			
 			
 			const listNode = document.getElementById("nyc_graphics");
 			let graphics; 
@@ -262,7 +261,6 @@
 								adresy_ulice[i] = ulice;
 							// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
 							} else {
-								//adresy_ulice[i] = "nezadaná";
 								adresy_ulice[i] = attributes.porucha_misto;
 							}
 							
@@ -283,7 +281,7 @@
 
 							fragment.appendChild(li);
 						});
-						//document.getElementById("testik").innerHTML = adresy_ulice;
+
 						// Empty the current list
 						listNode.innerHTML = "";
 						listNode.appendChild(fragment);
@@ -307,13 +305,9 @@
 				resultId && graphics && graphics[parseInt(resultId, 10)];
 
 			if (result) {
-				// open the popup at the centroid of zip code polygon
-				// and set the popup's features which will populate popup content and title.
-
 				view
-					//.goTo(result.geometry.extent.expand(2))   // extent a expand su pre polygonove vrstvy
-					.goTo(result.geometry)						// pre bodovu vrstvu musi byt iba result.geometry
-					.then(function() {							// este musim vymysliet, aby sa to prizoomovalo k tej odstavke
+					.goTo({center: result.geometry, zoom: view.zoom + 1})
+					.then(function() {
 						view.popup.open({
 							features: [result],
 							location: result.geometry.centroid
@@ -327,23 +321,375 @@
 			}
 			}
 			//}
+			
+			
+			// planovane odstavky
+			const listNode1 = document.getElementById("nyc_graphics1");
+			let graphics1; 
+				
+			// Tohle by se dalo výrazně zjednodušit, ale pro začátek by to mohlo vypadat takto:
+			main_service.loadAll()
+				.then(function() {
+				
+				view.watch("updating", function(value) {
+					
+					if (!value) {
+					planovane_odstavky
+						.queryFeatures({
+						geometry: view.extent,
+						returnGeometry: true,
+						orderByFields: ["oprava_zahajeni"],
+						outFields: ["*"], // Nutné vrátit potřebná pole pro server side query
+						})
+						.then(function(results) {
+						graphics1 = results.features;
+
+						const fragment = document.createDocumentFragment();
+						
+						let i = 0;
+						const adresy_ulice = [];
+						graphics1.forEach(function(result, index) {  
+							const attributes = result.attributes;
+							
+							// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
+							// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
+							if (attributes.oprava_adresy_omezene != null) {
+								// do premennej zdroj si nacitam vsetky dotknute adresy pre danu planovanu odstavku
+								var zdroj = attributes.oprava_adresy_omezene;
+								// najdem si poziciu prvej bodkociarky a ciarky, ak nie su, tak je ich pozicia -1
+								var strednikpos = zdroj.indexOf(";");
+								var ciarkapos = zdroj.indexOf(",");
+								var ulice = [];
+								
+								// ak sa bodkociarka nachadza, znamena to, ze tam je viac ulic
+								if (strednikpos > -1) {
+									// zdroj si rozsekam na pole ulice, prvok je ulica so vsetkymi cislami
+									ulice = zdroj.split(";");
+									
+									for (let j = 0; j < ulice.length; j++) {
+										// pre kazdy prvok sa najde pozicia prvej ciarky
+										var cipos = ulice[j].indexOf(",");
+										
+										if (cipos > -1) {
+											ulice[j] = ulice[j].substring(0, cipos);
+										}
+										let posledna_medzera = ulice[j].lastIndexOf(" ");
+										ulice[j] = ulice[j].substring(0, posledna_medzera);
+									}
+								} else {
+									if (ciarkapos > -1) {
+										zdroj = zdroj.substring(0, ciarkapos);
+									}
+									let posledna_medzera = zdroj.lastIndexOf(" ");
+									ulice[0] = zdroj.substring(0, posledna_medzera);
+								}
+								adresy_ulice[i] = ulice;
+							// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
+							} else {
+								adresy_ulice[i] = attributes.porucha_misto;
+							}
+							
+							var startDatume = new Date(attributes.oprava_zahajeni);
+							var endDatume = new Date(attributes.opravda_ukonceni);
+							let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + startDatume.getMinutes() + "0";
+							let endString = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear() + " " + endDatume.getHours() + ":" + endDatume.getMinutes() + "0";
+							
+							const name = attributes.porucha_typ + " (ulice " + adresy_ulice[i] + "): od " + startString + " do " + endString;
+							i += 1;
+							
+							// Create a list zip codes in NY
+							const li = document.createElement("li");
+							li.classList.add("panel-result");
+							li.tabIndex = 0;
+							li.setAttribute("data-result-id", index);
+							li.textContent = name;
+
+							fragment.appendChild(li);
+						});
+
+						// Empty the current list
+						listNode1.innerHTML = "";
+						listNode1.appendChild(fragment);
+						})
+						.catch(function(error) {
+						console.error("query failed: ", error);
+						});
+					}
+				});
+				});
+				
+			// listen to click event on the zip code list
+			listNode1.addEventListener("click", onListClickHandler1);
+
+			function onListClickHandler1(event) {
+			const target = event.target;
+			const resultId = target.getAttribute("data-result-id");
+
+			// get the graphic corresponding to the clicked zip code
+			const result = 
+				resultId && graphics1 && graphics1[parseInt(resultId, 10)];
+
+			if (result) {
+				view
+					.goTo({center: result.geometry, zoom: view.zoom + 1})
+					.then(function() {
+						view.popup.open({
+							features: [result],
+							location: result.geometry.centroid
+						});
+					})
+				.catch(function(error){
+				if (error.name != "AbortError"){
+					console.error(error);
+				}
+				});
+			}
+			}
+			
+			
+			
+			const listNode2 = document.getElementById("nyc_graphics2");
+			let graphics2; 
+				
+			// Tohle by se dalo výrazně zjednodušit, ale pro začátek by to mohlo vypadat takto:
+			main_service.loadAll()
+				.then(function() {
+				
+				view.watch("updating", function(value) {
+					
+					if (!value) {
+					odkaleni_hydrantu
+						.queryFeatures({
+						geometry: view.extent,
+						returnGeometry: true,
+						orderByFields: ["d_odkaleni"],
+						outFields: ["*"], // Nutné vrátit potřebná pole pro server side query
+						})
+						.then(function(results) {
+						graphics2 = results.features;
+
+						const fragment = document.createDocumentFragment();
+						
+						let i = 0;
+						const adresy_ulice = [];
+						graphics2.forEach(function(result, index) {  
+							const attributes = result.attributes;
+							
+							var startDatume = new Date(attributes.d_odkaleni);
+							let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + startDatume.getMinutes();
+							
+							const name = "Odkalení hydrantu od " + startString;
+							i += 1;
+							
+							// Create a list zip codes in NY
+							const li = document.createElement("li");
+							li.classList.add("panel-result");
+							li.tabIndex = 0;
+							li.setAttribute("data-result-id", index);
+							li.textContent = name;
+
+							fragment.appendChild(li);
+						});
+
+						// Empty the current list
+						listNode2.innerHTML = "";
+						listNode2.appendChild(fragment);
+						})
+						.catch(function(error) {
+						console.error("query failed: ", error);
+						});
+					}
+				});
+				});
+				
+			// listen to click event on the zip code list
+			listNode2.addEventListener("click", onListClickHandler2);
+
+			function onListClickHandler2(event) {
+			const target = event.target;
+			const resultId = target.getAttribute("data-result-id");
+
+			// get the graphic corresponding to the clicked zip code
+			const result = 
+				resultId && graphics2 && graphics2[parseInt(resultId, 10)];
+
+			if (result) {
+				view
+					.goTo({center: result.geometry, zoom: view.zoom + 1})
+					.then(function() {
+						view.popup.open({
+							features: [result],
+							location: result.geometry.centroid
+						});
+					})
+				.catch(function(error){
+				if (error.name != "AbortError"){
+					console.error(error);
+				}
+				});
+			}
+			}
+			
+			
+			
+			const listNode3 = document.getElementById("nyc_graphics3");
+			let graphics3; 
+				
+			// Tohle by se dalo výrazně zjednodušit, ale pro začátek by to mohlo vypadat takto:
+			main_service.loadAll()
+				.then(function() {
+				
+				view.watch("updating", function(value) {
+					
+					if (!value) {
+					info_obcany
+						.queryFeatures({
+						geometry: view.extent,
+						returnGeometry: true,
+						orderByFields: ["oprava_zahajeni"],
+						outFields: ["*"], // Nutné vrátit potřebná pole pro server side query
+						})
+						.then(function(results) {
+						graphics3 = results.features;
+
+						const fragment = document.createDocumentFragment();
+						
+						let i = 0;
+						const adresy_ulice = [];
+						graphics3.forEach(function(result, index) {  
+							const attributes = result.attributes;
+							
+							// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
+							// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
+							if (attributes.oprava_adresy_omezene != null) {
+								// do premennej zdroj si nacitam vsetky dotknute adresy pre danu planovanu odstavku
+								var zdroj = attributes.oprava_adresy_omezene;
+								// najdem si poziciu prvej bodkociarky a ciarky, ak nie su, tak je ich pozicia -1
+								var strednikpos = zdroj.indexOf(";");
+								var ciarkapos = zdroj.indexOf(",");
+								var ulice = [];
+								
+								// ak sa bodkociarka nachadza, znamena to, ze tam je viac ulic
+								if (strednikpos > -1) {
+									// zdroj si rozsekam na pole ulice, prvok je ulica so vsetkymi cislami
+									ulice = zdroj.split(";");
+									
+									for (let j = 0; j < ulice.length; j++) {
+										// pre kazdy prvok sa najde pozicia prvej ciarky
+										var cipos = ulice[j].indexOf(",");
+										
+										if (cipos > -1) {
+											ulice[j] = ulice[j].substring(0, cipos);
+										}
+										let posledna_medzera = ulice[j].lastIndexOf(" ");
+										ulice[j] = ulice[j].substring(0, posledna_medzera);
+									}
+								} else {
+									if (ciarkapos > -1) {
+										zdroj = zdroj.substring(0, ciarkapos);
+									}
+									let posledna_medzera = zdroj.lastIndexOf(" ");
+									ulice[0] = zdroj.substring(0, posledna_medzera);
+								}
+								adresy_ulice[i] = ulice;
+							// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
+							} else {
+								adresy_ulice[i] = attributes.porucha_misto;
+							}
+							
+							var startDatume = new Date(attributes.oprava_zahajeni);
+							var endDatume = new Date(attributes.opravda_ukonceni);
+							let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + startDatume.getMinutes();
+							let endString = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear() + " " + endDatume.getHours() + ":" + endDatume.getMinutes();
+							
+							const name = attributes.porucha_typ + " (ulice " + adresy_ulice[i] + "): od " + startString + " do " + endString;
+							i += 1;
+							
+							// Create a list zip codes in NY
+							const li = document.createElement("li");
+							li.classList.add("panel-result");
+							li.tabIndex = 0;
+							li.setAttribute("data-result-id", index);
+							li.textContent = name;
+
+							fragment.appendChild(li);
+						});
+
+						// Empty the current list
+						listNode3.innerHTML = "";
+						listNode3.appendChild(fragment);
+						})
+						.catch(function(error) {
+						console.error("query failed: ", error);
+						});
+					}
+				});
+				});
+				
+			// listen to click event on the zip code list
+			listNode3.addEventListener("click", onListClickHandler3);
+
+			function onListClickHandler3(event) {
+			const target = event.target;
+			const resultId = target.getAttribute("data-result-id");
+
+			// get the graphic corresponding to the clicked zip code
+			const result = 
+				resultId && graphics3 && graphics3[parseInt(resultId, 10)];
+
+			if (result) {
+				view
+					.goTo({center: result.geometry, zoom: view.zoom + 1})
+					.then(function() {
+						view.popup.open({
+							features: [result],
+							location: result.geometry.centroid
+						});
+					})
+				.catch(function(error){
+				if (error.name != "AbortError"){
+					console.error(error);
+				}
+				});
+			}
+			}
+			
+			
 		});
+		
+		<!-- const bocny_zoznam = new Expand({ -->
+		  <!-- view: view, -->
+		  <!-- container: sidePanelDiv, -->
+		  <!-- expanded: false -->
+		<!-- }); -->
+		<!-- view.ui.add(bocny_zoznam, { -->
+		  <!-- position: "top-right" -->
+		<!-- }); -->
+		
       });
     </script>
 	
   </head>
 
   <body>
-	<div class="panel-container">
-      <div class="panel-side esri-widget">
+	<div id="viewDiv" class="panel-container">
+      <div id="sidePanelDiv" class="panel-side esri-widget">
         <h3>Opravy</h3>    
         <ul id="nyc_graphics">
           <li>Loading&hellip;</li>
         </ul>
-		<!-- <h3>Plánované odstávky</h3>     -->
-        <!-- <ul id="nyc_graphics"> -->
-          <!-- <li>Loading&hellip;</li> -->
-        <!-- </ul> -->
+		<h3>Plánované odstávky</h3>    
+        <ul id="nyc_graphics1">
+          <li>Loading&hellip;</li>
+        </ul>
+		<h3>Odkalení hydrantů</h3>    
+        <ul id="nyc_graphics2">
+          <li>Loading&hellip;</li>
+        </ul>
+		<h3>Info pro občany</h3>    
+        <ul id="nyc_graphics3">
+          <li>Loading&hellip;</li>
+        </ul>
 		
       </div>
 
