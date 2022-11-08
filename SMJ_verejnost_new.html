@@ -15,7 +15,7 @@
 		"esri/views/MapView",
 		"esri/layers/FeatureLayer",
 		"esri/widgets/Legend",
-        	"esri/widgets/Expand",
+        "esri/widgets/Expand",
 		"esri/widgets/Search",
 		"esri/widgets/Home",
 		"esri/WebMap"
@@ -91,11 +91,11 @@
 		  index: 0
 		});
 		
-		
+		// home widget
 		var homeWidget = new Home({
-		  view: view
+  			view: view
 		});
-		view.ui.add(homeWidget, "top-left");		
+		view.ui.add(homeWidget, "top-left");
 
 				
 		// nacital som si 4 feature layers, ktore potrebujem mat v pocitadle prvkov a v bocnom zozname
@@ -181,7 +181,7 @@
 			info_obcany.queryFeatures({where: "1=1", outFields: ["*"]}).then(function(result){
 				pocty[3] = result.features.length;
 				suma = pocty[0] + pocty[1] + pocty[2] + pocty[3]; 
-				pocet_udalosti = pocty[0] + pocty[1] + pocty[2];
+				pocet_udalosti = pocty[0] + pocty[1];
 				if (pocet_udalosti == null) {          //"Nan"
 					pocet_udalosti = "refresh page";
 				}
@@ -193,8 +193,9 @@
 				view: view,
 				expanded: true,
 				iconNumber: suma,
-				content: '<div class="counterDiv"><p>Počet událostí: <div class="pocitadlo">' + pocet_udalosti + '</div></p>' +  
-						 '<p>Počet info pro občany: <div class="pocitadlo">' + pocty[3] + '</div></p></div>'
+				content: '<div class="counterDiv"><div class="pocitadlo">Počet oprav: <h2>' + pocty[0] + '</h2></div>' +  
+						 '<div class="pocitadlo"> Odkalení hydrantů: <h2>' + pocty[2] + '</h2></div>' +
+						 '<div class="pocitadlo"> Další události: <h2>' + (pocty[1] + pocty[3]) + '</h2></div></div>'
 				});
 				//view.ui.add(pocitadlo, "bottom-right");
 				view.ui.add(pocitadlo, "top-right");
@@ -211,7 +212,6 @@
 				.then(function() {
 				
 				//view.watch("updating", function(value) {
-					
 					//if (!value) {
 					opravy
 						.queryFeatures({
@@ -273,7 +273,8 @@
 							let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + startDatume.getMinutes() + "0";
 							let endString = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear() + " " + endDatume.getHours() + ":" + endDatume.getMinutes() + "0";
 							
-							const name = attributes.porucha_typ + " (ulice " + adresy_ulice[i] + "): od " + startString + " do " + endString;
+							// odstranit nadpisy a dat ich k vodovodom
+							const name = "Oprava – " + attributes.porucha_typ + " (ulice " + adresy_ulice[i] + "): od " + startString + " do " + endString;
 							i += 1;
 							
 							// Create a list zip codes in NY
@@ -336,7 +337,6 @@
 				.then(function() {
 				
 				//view.watch("updating", function(value) {
-					
 					//if (!value) {
 					planovane_odstavky
 						.queryFeatures({
@@ -398,7 +398,7 @@
 							let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + startDatume.getMinutes() + "0";
 							let endString = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear() + " " + endDatume.getHours() + ":" + endDatume.getMinutes() + "0";
 							
-							const name = attributes.porucha_typ + " (ulice " + adresy_ulice[i] + "): od " + startString + " do " + endString;
+							const name = "Plánovaná odstávka – " + attributes.porucha_typ + " (ulice " + adresy_ulice[i] + "): od " + startString + " do " + endString;
 							i += 1;
 							
 							// Create a list zip codes in NY
@@ -451,7 +451,7 @@
 			}
 			
 			
-			
+			// odkaleni hydrantu
 			const listNode2 = document.getElementById("nyc_graphics2");
 			let graphics2; 
 				
@@ -460,7 +460,6 @@
 				.then(function() {
 				
 				//view.watch("updating", function(value) {
-					
 					//if (!value) {
 					odkaleni_hydrantu
 						.queryFeatures({
@@ -480,9 +479,14 @@
 							const attributes = result.attributes;
 							
 							var startDatume = new Date(attributes.d_odkaleni);
-							let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + startDatume.getMinutes();
+							let minuty = startDatume.getMinutes();
+							minuty_text = minuty.toString();
+							if (minuty_text.length == 1) {
+								minuty_text = "0" + minuty_text;
+							}
+							let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + minuty_text;
 							
-							const name = "Odkalení hydrantu od " + startString;
+							const name = "Odkalení hydrantu – od " + startString;
 							i += 1;
 							
 							// Create a list zip codes in NY
@@ -544,7 +548,6 @@
 				.then(function() {
 				
 				//view.watch("updating", function(value) {
-					
 					//if (!value) {
 					info_obcany
 						.queryFeatures({
@@ -597,8 +600,10 @@
 								}
 								adresy_ulice[i] = ulice;
 							// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
-							} else {
+							} else if (attributes.porucha_misto != null) {
 								adresy_ulice[i] = attributes.porucha_misto;
+							} else {
+								adresy_ulice[i] = "neuvedena";
 							}
 							
 							var startDatume = new Date(attributes.oprava_zahajeni);
@@ -606,7 +611,7 @@
 							let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + startDatume.getMinutes();
 							let endString = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear() + " " + endDatume.getHours() + ":" + endDatume.getMinutes();
 							
-							const name = attributes.porucha_typ + " (ulice " + adresy_ulice[i] + "): od " + startString + " do " + endString;
+							const name = "Info pro občany – " + attributes.porucha_typ + " (ulice " + adresy_ulice[i] + "): od " + startString + " do " + endString;
 							i += 1;
 							
 							// Create a list zip codes in NY
@@ -678,19 +683,19 @@
   <body>
 	<div id="viewDiv" class="panel-container">
       <div id="sidePanelDiv" class="panel-side esri-widget">
-        <h3>Opravy</h3>    
+        <!-- <h3>Opravy</h3>     -->
         <ul id="nyc_graphics">
           <li>Loading&hellip;</li>
         </ul>
-		<h3>Plánované odstávky</h3>    
-        <ul id="nyc_graphics1">
-          <li>Loading&hellip;</li>
-        </ul>
-		<h3>Odkalení hydrantů</h3>    
+		<!-- <h3>Odkalení hydrantů</h3>     -->
         <ul id="nyc_graphics2">
           <li>Loading&hellip;</li>
         </ul>
-		<h3>Info pro občany</h3>    
+		<!-- <h3>Plánované odstávky</h3>     -->
+        <ul id="nyc_graphics1">
+          <li>Loading&hellip;</li>
+        </ul>
+		<!-- <h3>Info pro občany</h3>     -->
         <ul id="nyc_graphics3">
           <li>Loading&hellip;</li>
         </ul>
