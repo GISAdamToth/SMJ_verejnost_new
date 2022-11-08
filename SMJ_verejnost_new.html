@@ -15,10 +15,11 @@
 		"esri/views/MapView",
 		"esri/layers/FeatureLayer",
 		"esri/widgets/Legend",
-        "esri/widgets/Expand",
+        	"esri/widgets/Expand",
 		"esri/widgets/Search",
+		"esri/widgets/Home",
 		"esri/WebMap"
-	  ], function(Map, MapView, FeatureLayer, Legend, Expand, Search, WebMap) {
+	  ], function(Map, MapView, FeatureLayer, Legend, Expand, Search, Home, WebMap) {
 
 		// Config ---
 		const config = {
@@ -91,6 +92,11 @@
 		});
 		
 		
+		var homeWidget = new Home({
+		  view: view
+		});
+		view.ui.add(homeWidget, "top-left");		
+
 				
 		// nacital som si 4 feature layers, ktore potrebujem mat v pocitadle prvkov a v bocnom zozname
 		// tieto vrstvy su uz vo webmape, len neviem s nimi pracovat
@@ -204,11 +210,9 @@
 			main_service.loadAll()
 				.then(function() {
 				
-				view.watch("updating", function(value) {
+				//view.watch("updating", function(value) {
 					
-					if (!value) {
-					//planovane_odstavky
-					//vrstvy[x]
+					//if (!value) {
 					opravy
 						.queryFeatures({
 						geometry: view.extent,
@@ -289,8 +293,8 @@
 						.catch(function(error) {
 						console.error("query failed: ", error);
 						});
-					}
-				});
+					//}
+				//});
 				});
 				
 			// listen to click event on the zip code list
@@ -331,9 +335,9 @@
 			main_service.loadAll()
 				.then(function() {
 				
-				view.watch("updating", function(value) {
+				//view.watch("updating", function(value) {
 					
-					if (!value) {
+					//if (!value) {
 					planovane_odstavky
 						.queryFeatures({
 						geometry: view.extent,
@@ -414,8 +418,8 @@
 						.catch(function(error) {
 						console.error("query failed: ", error);
 						});
-					}
-				});
+					//}
+				//});
 				});
 				
 			// listen to click event on the zip code list
@@ -455,9 +459,9 @@
 			main_service.loadAll()
 				.then(function() {
 				
-				view.watch("updating", function(value) {
+				//view.watch("updating", function(value) {
 					
-					if (!value) {
+					//if (!value) {
 					odkaleni_hydrantu
 						.queryFeatures({
 						geometry: view.extent,
@@ -498,8 +502,8 @@
 						.catch(function(error) {
 						console.error("query failed: ", error);
 						});
-					}
-				});
+					//}
+				//});
 				});
 				
 			// listen to click event on the zip code list
@@ -539,9 +543,9 @@
 			main_service.loadAll()
 				.then(function() {
 				
-				view.watch("updating", function(value) {
+				//view.watch("updating", function(value) {
 					
-					if (!value) {
+					//if (!value) {
 					info_obcany
 						.queryFeatures({
 						geometry: view.extent,
@@ -622,8 +626,8 @@
 						.catch(function(error) {
 						console.error("query failed: ", error);
 						});
-					}
-				});
+					//}
+				//});
 				});
 				
 			// listen to click event on the zip code list
