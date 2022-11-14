@@ -31,14 +31,46 @@ html,body,
         text-align: center;
       }
 	  
-	  #testik {
-	  }
-	  
+    #panel_controls_content {
+      overflow-y: auto;
+      overflow-x: hidden;
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    #panel_controls_content .feature-list {
+      margin-top: 0px;
+    }
+
+    #panel_controls_content .esri-feature__title {
+      background-color: rgba(0, 0, 0, 0.75);
+      color: white;
+    }
+
+    #panel_controls_content .esri-feature__size-container {
+      background-color: rgba(0, 0, 0, 0.75);
+      color: white;
+      cursor: pointer;
+    }
+
+    #panel_controls_content .esri-widget__heading {
+      margin: 0 0 3px 0;
+    }
+
+    #panel_controls_content .esri-feature-content div {
+      padding: 10px;
+    }
+
+    #panel_controls_content .esri-feature__size-container:hover,
+    #panel_controls_content .esri-feature__size-container:focus {
+      color: orange;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+
 	  .counterDiv {
 		background-color: rgba(0, 0, 0, 0.6);
 		color: #fff;
 		text-align: center;	
-		padding: 1px 9px 1px 9px;
+		padding: 3px 9px 5px 9px;
 		display: flex;
 		width: 280px;
 		/* width: 18%; */
@@ -63,7 +95,8 @@ html,body,
         box-sizing: border-box;
         /* width: 18%; */
 		width: 280px;
-        height: 75%;
+        height: 550px;
+		/* height: 75%; */
         position: absolute;
         /* top: 2%; */
 		bottom: 3%;
