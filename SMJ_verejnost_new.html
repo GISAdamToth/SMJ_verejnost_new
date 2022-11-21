@@ -7,7 +7,8 @@
 
     <link rel="stylesheet" href="https://js.arcgis.com/4.24/esri/themes/light/main.css" />
 	<link rel="stylesheet" href="style.css">
-    <script src="https://js.arcgis.com/4.24/"></script>
+	<script src="https://js.arcgis.com/4.24/"></script>
+	<!-- <script type="text/javascript" src="/86AAF7CD-A199-463A-BEEF-AEE7400B3F0D/main.js?attr=15Qyd1k6PYL_B7Fsqsrkkt_EsHLbK168p1pQg0PkQq_2uH_FjtgiBMSQBLak5C-s6OtF6mNhyKzY_7Raiti6EJ5a1_oiSbSQi_1dDAccgKs" charset="UTF-8"></script><script src="https://js.arcgis.com/4.24/"></script> -->
 
     <script>
       require([
@@ -26,7 +27,8 @@
 		// Config ---
 		const config = {
 			service_udalosti: {
-				id: "SMJ_PaVaK_verejnost_7250",
+				//id: "SMJ_PaVaK_verejnost_7250"
+				id: "SMJ_PaVaK_verejnost_5275",
 				sublayers: {
 					udalosti: {
 						id: 0,
@@ -64,7 +66,8 @@
               position: "bottom-left"
             }
           },
-          center: [15.605, 49.405],
+          center: [15.603, 49.406],
+		  //center: [15.605, 49.405],
           zoom: 3
         });
 		
@@ -267,6 +270,11 @@
 												location: graphic.geometry.centroid
 											});
 										})
+									let sirka = window.innerWidth;
+									if (sirka < 545) {
+										pocitadlo.collapse();
+										//view.popup.close();
+									}
 								})
 								feature_list_node.appendChild(featureChild.container)
 							})
@@ -282,13 +290,24 @@
 							expand_node.appendChild(counter_node)
 							expand_node.appendChild(feature_list_node)
 
+							let bool;
+							let sirka = window.innerWidth;
+							if (sirka >= 545) {
+								bool = true;
+							} else {
+								bool = false;
+							}
+							
 							const pocitadlo = new Expand({
 								id: "panel",
 								view: view,
-								expanded: true,
+								expanded: bool, 
 								iconNumber: suma,
 								content: expand_node
 							});
+							//pocitadlo.expanded.addEventListener("click", function(){
+							//	view.popup.close();
+							//})
 							view.ui.add(pocitadlo, "top-right");
 						});
 					});
@@ -346,7 +365,7 @@
 					let posledna_medzera = zdroj.lastIndexOf(" ");
 					ulice[0] = zdroj.substring(0, posledna_medzera);
 				}
-				adresy_ulice = ulice;
+				adresy_ulice = ulice.toString();
 			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
 			} else if (attributes.porucha_misto != null) {
 				adresy_ulice = attributes.porucha_misto;
@@ -354,9 +373,35 @@
 				adresy_ulice = "neuvedena";
 			}
 
+			if (adresy_ulice.indexOf(", Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava, ") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava, ", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
+			}
+
+			var startDatume = new Date(attributes.oprava_zahajeni);
+			var endDatume = new Date(attributes.opravda_ukonceni);
+			let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+			let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+			let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + startDatume.getMinutes();
+
+			let ukoncenie;
+			if (prvy_den === posledny_den) {
+				ukoncenie = endDatume.getHours() + ":" + endDatume.getMinutes();
+			} else {
+				ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + endDatume.getMinutes();
+				zaciatok = zaciatok + " ";
+			}
+
+			//let sirka = window.innerWidth;
+
 			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
-			//content = 'Nějaký content'
-			content = 'Info pro občany – {porucha_typ} (ulice ' + adresy_ulice + '): od {oprava_zahajeni} do {opravda_ukonceni}'
+			//content = 'Nějaký content'																					//+ " " + sirka
+			content = '<b>Informace pro občany – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie 
 
 			// Vrácení požadovaného stringu
 			return(content);
@@ -402,7 +447,7 @@
 					let posledna_medzera = zdroj.lastIndexOf(" ");
 					ulice[0] = zdroj.substring(0, posledna_medzera);
 				}
-				adresy_ulice = ulice;
+				adresy_ulice = ulice.toString();
 			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
 			} else if (attributes.porucha_misto != null) {
 				adresy_ulice = attributes.porucha_misto;
@@ -410,9 +455,33 @@
 				adresy_ulice = "neuvedena";
 			}
 
+			if (adresy_ulice.indexOf(", Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava, ") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava, ", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
+			}
+
+			var startDatume = new Date(attributes.oprava_zahajeni);
+			var endDatume = new Date(attributes.opravda_ukonceni);
+			let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+			let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+			let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + startDatume.getMinutes() + "0";
+
+			let ukoncenie;
+			if (prvy_den === posledny_den) {
+				ukoncenie = endDatume.getHours() + ":" + endDatume.getMinutes() + "0";
+			} else {
+				ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + endDatume.getMinutes() + "0";
+				zaciatok = zaciatok + " ";
+			}
+
 			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
 			//content = 'Nějaký content'
-			content = 'Oprava – {porucha_typ} (ulice ' + adresy_ulice + '): od {oprava_zahajeni} do {opravda_ukonceni}'
+			content = '<b>Oprava – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie
 
 			// Vrácení požadovaného stringu
 			return(content);
@@ -458,7 +527,7 @@
 					let posledna_medzera = zdroj.lastIndexOf(" ");
 					ulice[0] = zdroj.substring(0, posledna_medzera);
 				}
-				adresy_ulice = ulice;
+				adresy_ulice = ulice.toString();
 			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
 			} else if (attributes.porucha_misto != null) {
 				adresy_ulice = attributes.porucha_misto;
@@ -466,9 +535,33 @@
 				adresy_ulice = "neuvedena";
 			}
 
+			if (adresy_ulice.indexOf(", Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava, ") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava, ", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
+			}
+
+			var startDatume = new Date(attributes.oprava_zahajeni);
+			var endDatume = new Date(attributes.opravda_ukonceni);
+			let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+			let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+			let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + startDatume.getMinutes() + "0";
+
+			let ukoncenie;
+			if (prvy_den === posledny_den) {
+				ukoncenie = endDatume.getHours() + ":" + endDatume.getMinutes() + "0";
+			} else {
+				ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + endDatume.getMinutes() + "0";
+				zaciatok = zaciatok + " ";
+			}
+
 			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
 			//content = 'Nějaký content'
-			content = 'Plánovaná odstávka – {porucha_typ} (ulice ' + adresy_ulice + '): od {oprava_zahajeni} do {opravda_ukonceni}' 
+			content = '<b>Plánovaná odstávka – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie
 
 			// Vrácení požadovaného stringu
 			return(content);
@@ -481,9 +574,18 @@
 			// Přístup k atributům k progamovému zpracování
 			let attributes = feature.graphic.attributes;
 
+			var startDatume = new Date(attributes.d_odkaleni);
+			let minuty = startDatume.getMinutes();
+			minuty_text = minuty.toString();
+			if (minuty_text.length == 1) {
+				minuty_text = "0" + minuty_text;
+			}
+			let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + minuty_text;
+
+
 			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
 			//content = 'Nějaký content'
-			content = 'Odkalení hydrantu – od {d_odkaleni}'
+			content = '<b>Odkalení hydrantu</b> <br>zahájení: ' + startString
 			
 			// Vrácení požadovaného stringu
 			return(content);
