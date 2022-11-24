@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Nová mapa pro veřejnost</title>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.24/esri/themes/light/main.css" />
+	<link rel="stylesheet" href="style_trial.css">
+	<script src="https://js.arcgis.com/4.24/"></script>
+	<!-- <script type="text/javascript" src="/86AAF7CD-A199-463A-BEEF-AEE7400B3F0D/main.js?attr=15Qyd1k6PYL_B7Fsqsrkkt_EsHLbK168p1pQg0PkQq_2uH_FjtgiBMSQBLak5C-s6OtF6mNhyKzY_7Raiti6EJ5a1_oiSbSQi_1dDAccgKs" charset="UTF-8"></script><script src="https://js.arcgis.com/4.24/"></script> -->
+
+    <script>
+	  var suma;
+      require([
+		"esri/Map",
+		"esri/views/MapView",
+		"esri/layers/FeatureLayer",
+		"esri/widgets/Legend",
+        "esri/widgets/Expand",
+		"esri/widgets/Search",
+		"esri/widgets/Home",
+		"esri/WebMap",
+		"esri/widgets/Feature",
+		"esri/Graphic"
+	  ], function(Map, MapView, FeatureLayer, Legend, Expand, Search, Home, WebMap, Feature, Graphic) {
+
+		// Config ---
+		const config = {
+			service_udalosti: {
+				//id: "SMJ_PaVaK_verejnost_7250"
+				id: "SMJ_PaVaK_verejnost_5275",
+				sublayers: {
+					udalosti: {
+						id: 0,
+						sublayers: {
+							opravy_id: 1,
+							planovane_o_id: 2,
+							odkaleni_id: 3,
+							info_id: 8,
+							opravy_u_id: 7
+							// .....
+						}
+					}
+				}
+			}
+		}
+		// ---
+
+		// nacitanie webmapy cez portalitem id a portal url
+		const webmap = new WebMap({
+          portalItem: {
+            id: "9756a74af46c4d9f97e0f681b021ea12",
+			portal: {
+				url: "https://gis.jihlava-city.cz/portal/"
+			}
+          }
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+		  map: webmap,
+		  popup: {
+            dockEnabled: false,   // dockEnabled riadi, ci sa popup zobrazi na kliknutom prvku alebo na dock position, ktora je nastavena
+            dockOptions: {
+              buttonEnabled: true,
+			  breakpoint: false,
+              position: "bottom-left"
+            }
+          },
+          center: [15.603, 49.406],
+		  //center: [15.605, 49.405],
+          zoom: 3
+        });
+		
+		// legenda
+		const legend = new Expand({
+		  content: new Legend({
+			view: view,
+			style: "classic"
+		  }),
+		  view: view,
+		  expanded: false
+		});
+		view.ui.add(legend, "top-left");	
+		
+		// search widget
+		var searchWidget = new Search({
+		  view: view,
+		  expanded: false
+		});
+		view.ui.add(searchWidget, {
+		  position: "top-left",
+		  index: 0
+		});
+		
+		// home widget
+		var homeWidget = new Home({
+  			view: view
+		});
+		view.ui.add(homeWidget, "top-left");
+
+				
+		// nacital som si 4 feature layers, ktore potrebujem mat v pocitadle prvkov a v bocnom zozname
+		// tieto vrstvy su uz vo webmape, len neviem s nimi pracovat
+		// zatial pracujem len s vrstvou planovane odstavky
+
+		// Pokud máš webovou mapu připravenou na Portalu, nemusíš je vytvářet znovu, ale můžeš je načíst 
+		// přímo z webové mapy. S tím získáš konfiguraci popups, viditelnosti, měřítkových úrovní atd.
+		// Abys vrstvy mohl z mapy načíst, musíš počkat, až se mapa načte - view.when...
+
+		view.when(function() {
+
+			// ... po načtení mapy, přistoupíš k mapové službě (MapImageLayer),
+			// mapová služba a její vrstvy jsou v mapě evidovány pod ID, viz e-mail
+
+			// Mapová služba
+			var main_service = webmap.findLayerById(config.service_udalosti.id); 
+		
+			// ... a pak k vrstvám mapové služby
+
+			// Události (sublayer)
+			var udalosti_sublayer = main_service.sublayers.find(function(sublayer) {
+				return sublayer.id === config.service_udalosti.sublayers.udalosti.id; 
+			});
+			console.log(udalosti_sublayer.title);
+
+			// Opravy (sublayer Událostí)
+			var opravy_sublayer = udalosti_sublayer.sublayers.find(function(sublayer) {
+				return sublayer.id === config.service_udalosti.sublayers.udalosti.sublayers.opravy_id; 
+			});
+			console.log(opravy_sublayer.title);
+
+			// Odstávky (sublayer Událostí)
+			var planovane_odstavky_sublayer = udalosti_sublayer.sublayers.find(function(sublayer) {
+				return sublayer.id === config.service_udalosti.sublayers.udalosti.sublayers.planovane_o_id; 
+			});
+			console.log(planovane_odstavky_sublayer.title);
+
+			// Odkalení (sublayer Událostí)
+			var odkaleni_hydrantu_sublayer = udalosti_sublayer.sublayers.find(function(sublayer) {
+				return sublayer.id === config.service_udalosti.sublayers.udalosti.sublayers.odkaleni_id; 
+			});
+			console.log(odkaleni_hydrantu_sublayer.title);
+			
+			// Info (sublayer Událostí)
+			var info_obcany_sublayer = udalosti_sublayer.sublayers.find(function(sublayer) {
+				return sublayer.id === config.service_udalosti.sublayers.udalosti.sublayers.info_id; 
+			});
+			console.log(info_obcany_sublayer.title);
+
+			var opravy_ukoncene_sublayer = udalosti_sublayer.sublayers.find(function(sublayer) {
+				return sublayer.id === config.service_udalosti.sublayers.udalosti.sublayers.opravy_u_id; 
+			});
+			console.log(opravy_ukoncene_sublayer.title);
+
+			const opravy = opravy_sublayer;
+			opravy_sublayer.outFields = ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene", "porucha_misto"];
+
+			const planovane_odstavky = planovane_odstavky_sublayer;
+			planovane_odstavky_sublayer.outFields = ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene", "porucha_misto"];
+	
+			const odkaleni_hydrantu = odkaleni_hydrantu_sublayer;
+			opravy_sublayer.outFields = ["objectid", "souhrn_provoz", "d_odkaleni"];
+			
+			const info_obcany = info_obcany_sublayer;
+			info_obcany_sublayer.outFields = ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene", "porucha_misto"];
+			
+			const opravy_ukoncene = opravy_ukoncene_sublayer;
+			opravy_ukoncene_sublayer.outFields = ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_adresy_omezene", "porucha_misto"];
+			//opravy_ukoncene_sublayer.visible = true;
+			
+			console.log(opravy.title);
+			
+			var pocty = [];
+			
+			// Tím, že pracuješ se sublayers, nemůžeš použít metodu queryFeatureCount() , ale můžeš to vyřešit
+			// třeba takto - jednoduché query na vrstvu, ktetým si necháš vrátit všechny prvky
+
+			// KAMIL: Zde je řešení tvého problému s občasným "nenačítáním" statistik do výpisu.
+			// Bylo to z toho důvodu, že ti vznikl HTML element dříve, než ti server vrátil výsledek query.
+			// Resp. takto: úplně na začátku deklaruješ proměnnou "pocty". Pak spouštíš několikrát metodu queryFeatures, 
+			// tato metoda je asynchronní - tj. odešle požadavek na server, ale javascript kód se vykonává dál.
+			// Takže v momentě, kdy ještě nemáš výsledek ze serveru (výsledek queryFeatures), vkládáš prázdou proměnnou pocty do conentu
+			// Expand widgetu. Pomocí metody "then" (jedná se o tzv. callback funkci) můžeš čekat až ti server vrátí výsledek a až pak
+			// spouštět další javascript kód. Jedním z řešení je tedy zanořovat then pro každou vrstvu, aby si vždy počkal na výsledek.
+			// Opět, jde to udělat i elegantněji - mrkni na koncept promise, ale pro tyhle účely jsem to nechal takto. 
+
+			// KAMIL: Sklad grafik pro Feature widget (boční výpis)
+			let graphics_list = []
+			opravy.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
+				pocty[0] = result.features.length;
+
+				// KAMIL: Uložení grafik do skladu a přiřazení speciálního id, 
+				// pomocí kterého pak budeš filtrovat vrstvy pro nastavení speciálního popup
+				result.features.forEach((graphic) => {
+					graphic.customId = opravy.title;
+					graphics_list.push(graphic)
+				})
+
+				planovane_odstavky.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
+					pocty[1] = result.features.length;
+
+					result.features.forEach((graphic) => {
+						graphic.customId = planovane_odstavky.title;
+						graphics_list.push(graphic)
+					})
+
+					odkaleni_hydrantu.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
+						pocty[2] = result.features.length;
+
+						result.features.forEach((graphic) => {
+							graphic.customId = odkaleni_hydrantu.title;
+							graphics_list.push(graphic)
+						})
+
+						info_obcany.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
+							pocty[3] = result.features.length;
+							suma = pocty[0] + pocty[1] + pocty[2] + pocty[3]; 
+
+							result.features.forEach((graphic) => {
+								graphic.customId = info_obcany.title;
+								graphics_list.push(graphic)
+							})
+							
+							opravy_ukoncene.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
+								pocty[4] = result.features.length;
+
+								result.features.forEach((graphic) => {
+									graphic.customId = opravy_ukoncene.title;
+									graphics_list.push(graphic)
+								})
+							
+							//vytvorenie pocitadla ako rozbalovacieho panela
+
+							let feature_list_node = document.createElement("div");
+							feature_list_node.classList.add("feature-list")
+							graphics_list.forEach((graphic) => {
+
+								// KAMIL: Klon grafiky pro výpis v panelu -> nastavení rozdílného popup
+								let graphic_clone_for_panel = graphic.clone();
+
+								// KAMIL: Tady zjistíš, z jaké vrstvy grafika pochází a nastavíš specifický popup pro výpis
+								if (graphic.customId === opravy.title) {
+									graphic_clone_for_panel.popupTemplate = {
+										title: "", 
+										content: createContentForOpravy
+									};
+								}
+								if (graphic.customId === planovane_odstavky.title) {
+									graphic_clone_for_panel.popupTemplate = {
+										title: "", 
+										content: createContentForOdstavky
+									};
+								}
+								if (graphic.customId === info_obcany.title) {
+									graphic_clone_for_panel.popupTemplate = {
+										title: "", 
+										content: createContentForInfo
+									};
+								}
+						  	    if (graphic.customId === odkaleni_hydrantu.title) {
+									graphic_clone_for_panel.popupTemplate = {
+										title: "", 
+										content: createContentForOdkaleni
+									};
+								}		
+								if (graphic.customId === opravy_ukoncene.title) {
+									graphic_clone_for_panel.popupTemplate = {
+										title: "", 
+										content: createContentForOpravyUk
+									};
+								}
+								// KAMIL: Inicializace Feature widgetu pro výpis = původní boční panel
+								// Pozn.: Koukni na možnosti Feature widgetu do dokumentace, pro výpis se skvěle hodí a dost se ti zjednoduší práce
+								let featureChild = new Feature({
+									container: document.createElement("div"),
+									graphic: graphic_clone_for_panel, // Speciální popup
+									map: view.map,
+									spatialReference: view.spatialReference
+								});
+								featureChild.container.addEventListener("click", function(){
+									view
+										//.goTo({center: graphic.geometry, zoom: view.zoom + 1})
+										.goTo({center: graphic.geometry, zoom: 15})
+										.then(function() {
+											view.popup.open({
+												features: [graphic], // Původní grafika s původním popup
+												location: graphic.geometry.centroid
+											});
+										})
+									let sirka = window.innerWidth;
+									if (sirka < 545) {
+										pocitadlo.collapse();
+										//view.popup.close();
+									}
+								})
+								if (graphic.customId != opravy_ukoncene.title) {
+									feature_list_node.appendChild(featureChild.container)
+								}
+							})
+
+							let counter_node = document.createElement("div");
+							counter_node.innerHTML = `<div class="counterDiv">
+														<div class="pocitadlo">Počet oprav: <h2>${pocty[0]}</h2></div>
+														<div class="pocitadlo">Další události: <h2>${(pocty[1] + pocty[3])}</h2></div> 
+														<div class="pocitadlo">Odkalení hydrantů: <h2> ${pocty[2]}</h2></div>
+													</div>`
+													
+							let button_node = document.createElement("div");
+							let buttonChild1 = document.createElement("div");
+							let buttonChild2 = document.createElement("div");
+							
+							buttonChild1.innerHTML = "<button>Ukončené opravy</button>";
+							buttonChild1.addEventListener("click", function(){
+								suma = pocty[4];
+							
+								opravy_ukoncene_sublayer.visible = true;
+								opravy_sublayer.visible = false;
+								planovane_odstavky_sublayer.visible = false;
+								odkaleni_hydrantu_sublayer.visible = false;
+								info_obcany_sublayer.visible = false;
+								
+								counter_node.innerHTML = `<div class="counterDiv">
+														<div class="pocitadlo1">Ukončené opravy: <h2> ${pocty[4]}</h2></div> 
+													</div>`
+													
+								feature_list_node.innerHTML = '';
+								graphics_list.forEach((graphic) => {
+									let graphic_clone_for_panel = graphic.clone();
+									if (graphic.customId === opravy_ukoncene.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForOpravyUk
+										};
+									}
+				
+									let featureChild = new Feature({
+										container: document.createElement("div"),
+										graphic: graphic_clone_for_panel, // Speciální popup
+										map: view.map,
+										spatialReference: view.spatialReference
+									});
+									featureChild.container.addEventListener("click", function(){
+										view
+											.goTo({center: graphic.geometry, zoom: view.zoom + 1})
+											.then(function() {
+												view.popup.open({
+													features: [graphic],
+													location: graphic.geometry.centroid
+												});
+											})
+										let sirka = window.innerWidth;
+										if (sirka < 545) {
+											pocitadlo.collapse();
+										}
+									})
+									if (graphic.customId === opravy_ukoncene.title) {
+										feature_list_node.appendChild(featureChild.container)
+									}
+								})
+							})
+							
+							
+							buttonChild2.innerHTML = "<button>Aktuálne udalosti</button>";
+							buttonChild2.addEventListener("click", function(){
+								suma = pocty[0] + pocty[1] + pocty[2] + pocty[3];
+								
+								opravy_ukoncene_sublayer.visible = false;
+								opravy_sublayer.visible = true;
+								planovane_odstavky_sublayer.visible = true;
+								odkaleni_hydrantu_sublayer.visible = true;
+								info_obcany_sublayer.visible = true;
+								
+								counter_node.innerHTML = `<div class="counterDiv">
+														<div class="pocitadlo">Počet oprav: <h2>${pocty[0]}</h2></div>
+														<div class="pocitadlo">Další události: <h2>${(pocty[1] + pocty[3])}</h2></div> 
+														<div class="pocitadlo">Odkalení hydrantů: <h2> ${pocty[2]}</h2></div>
+													</div>`
+													
+								feature_list_node.innerHTML = '';
+								graphics_list.forEach((graphic) => {
+									let graphic_clone_for_panel = graphic.clone();
+									if (graphic.customId === opravy.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForOpravy
+										};
+									}
+									if (graphic.customId === planovane_odstavky.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForOdstavky
+										};
+									}
+									if (graphic.customId === info_obcany.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForInfo
+										};
+									}
+									if (graphic.customId === odkaleni_hydrantu.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForOdkaleni
+										};
+									}
+				
+									let featureChild = new Feature({
+										container: document.createElement("div"),
+										graphic: graphic_clone_for_panel, // Speciální popup
+										map: view.map,
+										spatialReference: view.spatialReference
+									});
+									featureChild.container.addEventListener("click", function(){
+										view
+											.goTo({center: graphic.geometry, zoom: view.zoom + 1})
+											.then(function() {
+												view.popup.open({
+													features: [graphic],
+													location: graphic.geometry.centroid
+												});
+											})
+										let sirka = window.innerWidth;
+										if (sirka < 545) {
+											pocitadlo.collapse();
+										}
+									})
+									if (graphic.customId != opravy_ukoncene.title) {
+										feature_list_node.appendChild(featureChild.container)
+									}
+								})
+							})
+							
+							button_node.appendChild(buttonChild1)
+							button_node.appendChild(buttonChild2)
+
+							// KAMIL: vytvoření rodičovského HTML node pro kombinovaný content Expand widgetu
+							let expand_node = document.createElement("div");
+							expand_node.appendChild(counter_node)
+							expand_node.appendChild(button_node)
+							expand_node.appendChild(feature_list_node)
+
+							let bool;
+							let sirka = window.innerWidth;
+							if (sirka >= 545) {
+								bool = true;
+							} else {
+								bool = false;
+							}
+							
+							const pocitadlo = new Expand({
+								id: "panel",
+								view: view,
+								expanded: bool, 
+								iconNumber: suma,
+								content: expand_node
+							});
+							//pocitadlo.expanded.addEventListener("click", function(){
+							//	view.popup.close();
+							//})
+							view.ui.add(pocitadlo, "top-right");
+						});
+					});
+				});
+			});
+
+		});
+		
+		// KAMIL: V této sekci máš vytvořené funkce pro vytvoření contentu výpisů v bočním panelu, tyto je potřeba dopracovat
+		// Pro každou vrstvu samostatná funkce
+		// Funkce se spuští v nastavení popup pro klon grafiky - viz výše
+		let createContentForInfo = (feature) => {
+			// Tady inicializuješ prázdný string, do kterého pak vyskládáš podobu výpisu a tento string funcí vrátíš
+			let content;
+
+			// Přístup k atributům k progamovému zpracování
+			let attributes = feature.graphic.attributes;
+
+			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
+			<!-- let porucha_typ; -->
+			<!-- if (attributes.porucha_typ === "vodovod") {porucha_typ = "TYP PORUCHY JE VODOVOD"} -->
+			<!-- content = 'Pokud nebudeš atributy upravovat (hodí se např. pro datumy), lze k nim přistoupit takto: ZAHÁJENÍ OPRAVY: {oprava_zahajeni}' -->
+			<!-- + '. A připojení programově zpracovaného kódu lze provést např. takto: ' + porucha_typ; -->
+			
+			let adresy_ulice;
+			// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
+			// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
+			if (attributes.oprava_adresy_omezene != null) {
+				// do premennej zdroj si nacitam vsetky dotknute adresy pre danu planovanu odstavku
+				var zdroj = attributes.oprava_adresy_omezene;
+				// najdem si poziciu prvej bodkociarky a ciarky, ak nie su, tak je ich pozicia -1
+				var strednikpos = zdroj.indexOf(";");
+				var ciarkapos = zdroj.indexOf(",");
+				var ulice = [];
+				
+				// ak sa bodkociarka nachadza, znamena to, ze tam je viac ulic
+				if (strednikpos > -1) {
+					// zdroj si rozsekam na pole ulice, prvok je ulica so vsetkymi cislami
+					ulice = zdroj.split(";");
+					
+					for (let j = 0; j < ulice.length; j++) {
+						// pre kazdy prvok sa najde pozicia prvej ciarky
+						var cipos = ulice[j].indexOf(",");
+						
+						if (cipos > -1) {
+							ulice[j] = ulice[j].substring(0, cipos);
+						}
+						let posledna_medzera = ulice[j].lastIndexOf(" ");
+						ulice[j] = ulice[j].substring(0, posledna_medzera);
+					}
+				} else {
+					if (ciarkapos > -1) {
+						zdroj = zdroj.substring(0, ciarkapos);
+					}
+					let posledna_medzera = zdroj.lastIndexOf(" ");
+					ulice[0] = zdroj.substring(0, posledna_medzera);
+				}
+				adresy_ulice = ulice.toString();
+			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
+			} else if (attributes.porucha_misto != null) {
+				adresy_ulice = attributes.porucha_misto;
+			} else {
+				adresy_ulice = "neuvedena";
+			}
+
+			if (adresy_ulice.indexOf(", Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava, ") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava, ", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
+			}
+
+			var startDatume = new Date(attributes.oprava_zahajeni);
+			var endDatume = new Date(attributes.opravda_ukonceni);
+			let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+			let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+		
+			let sminuty = startDatume.getMinutes();
+			sminuty_text = sminuty.toString();
+			if (sminuty_text.length == 1) {
+				sminuty_text = "0" + sminuty_text;
+			}
+			let eminuty = endDatume.getMinutes();
+			eminuty_text = eminuty.toString();
+			if (eminuty_text.length == 1) {
+				eminuty_text = "0" + eminuty_text;
+			}
+
+			let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
+
+			let ukoncenie;
+			if (prvy_den === posledny_den) {
+				ukoncenie = endDatume.getHours() + ":" + eminuty_text;
+			} else {
+				ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+				zaciatok = zaciatok + " ";
+			}
+
+			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
+			//content = 'Nějaký content'																					//+ " " + sirka
+			content = '<b>Informace pro občany – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie 
+
+			// Vrácení požadovaného stringu
+			return(content);
+		}
+
+		let createContentForOpravy = (feature) => {
+			// Tady inicializuješ prázdný string, do kterého pak vyskládáš podobu výpisu a tento string funcí vrátíš
+			let content;
+
+			// Přístup k atributům k progamovému zpracování
+			let attributes = feature.graphic.attributes;
+
+			let adresy_ulice;
+			// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
+			// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
+			if (attributes.oprava_adresy_omezene != null) {
+				// do premennej zdroj si nacitam vsetky dotknute adresy pre danu planovanu odstavku
+				var zdroj = attributes.oprava_adresy_omezene;
+				// najdem si poziciu prvej bodkociarky a ciarky, ak nie su, tak je ich pozicia -1
+				var strednikpos = zdroj.indexOf(";");
+				var ciarkapos = zdroj.indexOf(",");
+				var ulice = [];
+				
+				// ak sa bodkociarka nachadza, znamena to, ze tam je viac ulic
+				if (strednikpos > -1) {
+					// zdroj si rozsekam na pole ulice, prvok je ulica so vsetkymi cislami
+					ulice = zdroj.split(";");
+					
+					for (let j = 0; j < ulice.length; j++) {
+						// pre kazdy prvok sa najde pozicia prvej ciarky
+						var cipos = ulice[j].indexOf(",");
+						
+						if (cipos > -1) {
+							ulice[j] = ulice[j].substring(0, cipos);
+						}
+						let posledna_medzera = ulice[j].lastIndexOf(" ");
+						ulice[j] = ulice[j].substring(0, posledna_medzera);
+					}
+				} else {
+					if (ciarkapos > -1) {
+						zdroj = zdroj.substring(0, ciarkapos);
+					}
+					let posledna_medzera = zdroj.lastIndexOf(" ");
+					ulice[0] = zdroj.substring(0, posledna_medzera);
+				}
+				adresy_ulice = ulice.toString();
+			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
+			} else if (attributes.porucha_misto != null) {
+				adresy_ulice = attributes.porucha_misto;
+			} else {
+				adresy_ulice = "neuvedena";
+			}
+
+			if (adresy_ulice.indexOf(", Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava, ") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava, ", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
+			}
+
+			var startDatume = new Date(attributes.oprava_zahajeni);
+			var endDatume = new Date(attributes.opravda_ukonceni);
+			let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+			let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+		
+			let sminuty = startDatume.getMinutes();
+			sminuty_text = sminuty.toString();
+			if (sminuty_text.length == 1) {
+				sminuty_text = "0" + sminuty_text;
+			}
+			let eminuty = endDatume.getMinutes();
+			eminuty_text = eminuty.toString();
+			if (eminuty_text.length == 1) {
+				eminuty_text = "0" + eminuty_text;
+			}
+
+			let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
+
+			let ukoncenie;
+			if (prvy_den === posledny_den) {
+				ukoncenie = endDatume.getHours() + ":" + eminuty_text;
+			} else {
+				ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+				zaciatok = zaciatok + " ";
+			}
+
+			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
+			//content = 'Nějaký content'
+			content = '<b>Oprava – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie
+
+			// Vrácení požadovaného stringu
+			return(content);
+		}
+
+		let createContentForOdstavky = (feature) => {
+			// Tady inicializuješ prázdný string, do kterého pak vyskládáš podobu výpisu a tento string funcí vrátíš
+			let content;
+
+			// Přístup k atributům k progamovému zpracování
+			let attributes = feature.graphic.attributes;
+			
+			let adresy_ulice;
+			// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
+			// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
+			if (attributes.oprava_adresy_omezene != null) {
+				// do premennej zdroj si nacitam vsetky dotknute adresy pre danu planovanu odstavku
+				var zdroj = attributes.oprava_adresy_omezene;
+				// najdem si poziciu prvej bodkociarky a ciarky, ak nie su, tak je ich pozicia -1
+				var strednikpos = zdroj.indexOf(";");
+				var ciarkapos = zdroj.indexOf(",");
+				var ulice = [];
+				
+				// ak sa bodkociarka nachadza, znamena to, ze tam je viac ulic
+				if (strednikpos > -1) {
+					// zdroj si rozsekam na pole ulice, prvok je ulica so vsetkymi cislami
+					ulice = zdroj.split(";");
+					
+					for (let j = 0; j < ulice.length; j++) {
+						// pre kazdy prvok sa najde pozicia prvej ciarky
+						var cipos = ulice[j].indexOf(",");
+						
+						if (cipos > -1) {
+							ulice[j] = ulice[j].substring(0, cipos);
+						}
+						let posledna_medzera = ulice[j].lastIndexOf(" ");
+						ulice[j] = ulice[j].substring(0, posledna_medzera);
+					}
+				} else {
+					if (ciarkapos > -1) {
+						zdroj = zdroj.substring(0, ciarkapos);
+					}
+					let posledna_medzera = zdroj.lastIndexOf(" ");
+					ulice[0] = zdroj.substring(0, posledna_medzera);
+				}
+				adresy_ulice = ulice.toString();
+			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
+			} else if (attributes.porucha_misto != null) {
+				adresy_ulice = attributes.porucha_misto;
+			} else {
+				adresy_ulice = "neuvedena";
+			}
+
+			if (adresy_ulice.indexOf(", Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava, ") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava, ", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
+			}
+
+			var startDatume = new Date(attributes.oprava_zahajeni);
+			var endDatume = new Date(attributes.opravda_ukonceni);
+			let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+			let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+		
+			let sminuty = startDatume.getMinutes();
+			sminuty_text = sminuty.toString();
+			if (sminuty_text.length == 1) {
+				sminuty_text = "0" + sminuty_text;
+			}
+			let eminuty = endDatume.getMinutes();
+			eminuty_text = eminuty.toString();
+			if (eminuty_text.length == 1) {
+				eminuty_text = "0" + eminuty_text;
+			}
+
+			let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
+
+			let ukoncenie;
+			if (prvy_den === posledny_den) {
+				ukoncenie = endDatume.getHours() + ":" + eminuty_text;
+			} else {
+				ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+				zaciatok = zaciatok + " ";
+			}
+
+			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
+			//content = 'Nějaký content'
+			content = '<b>Plánovaná odstávka – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie
+
+			// Vrácení požadovaného stringu
+			return(content);
+		}
+
+		let createContentForOdkaleni = (feature) => {
+			// Tady inicializuješ prázdný string, do kterého pak vyskládáš podobu výpisu a tento string funcí vrátíš
+			let content;
+
+			// Přístup k atributům k progamovému zpracování
+			let attributes = feature.graphic.attributes;
+
+			var startDatume = new Date(attributes.d_odkaleni);
+			let minuty = startDatume.getMinutes();
+			minuty_text = minuty.toString();
+			if (minuty_text.length == 1) {
+				minuty_text = "0" + minuty_text;
+			}
+			let startString = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear() + " " + startDatume.getHours() + ":" + minuty_text;
+
+
+			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
+			//content = 'Nějaký content'
+			content = '<b>Odkalení hydrantu</b> <br>zahájení: ' + startString
+			
+			// Vrácení požadovaného stringu
+			return(content);
+		}
+		
+		let createContentForOpravyUk = (feature) => {
+			// Tady inicializuješ prázdný string, do kterého pak vyskládáš podobu výpisu a tento string funcí vrátíš
+			let content;
+
+			// Přístup k atributům k progamovému zpracování
+			let attributes = feature.graphic.attributes;
+
+			let adresy_ulice;
+			// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
+			// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
+			if (attributes.oprava_adresy_omezene != null) {
+				// do premennej zdroj si nacitam vsetky dotknute adresy pre danu planovanu odstavku
+				var zdroj = attributes.oprava_adresy_omezene;
+				// najdem si poziciu prvej bodkociarky a ciarky, ak nie su, tak je ich pozicia -1
+				var strednikpos = zdroj.indexOf(";");
+				var ciarkapos = zdroj.indexOf(",");
+				var ulice = [];
+				
+				// ak sa bodkociarka nachadza, znamena to, ze tam je viac ulic
+				if (strednikpos > -1) {
+					// zdroj si rozsekam na pole ulice, prvok je ulica so vsetkymi cislami
+					ulice = zdroj.split(";");
+					
+					for (let j = 0; j < ulice.length; j++) {
+						// pre kazdy prvok sa najde pozicia prvej ciarky
+						var cipos = ulice[j].indexOf(",");
+						
+						if (cipos > -1) {
+							ulice[j] = ulice[j].substring(0, cipos);
+						}
+						let posledna_medzera = ulice[j].lastIndexOf(" ");
+						ulice[j] = ulice[j].substring(0, posledna_medzera);
+					}
+				} else {
+					if (ciarkapos > -1) {
+						zdroj = zdroj.substring(0, ciarkapos);
+					}
+					let posledna_medzera = zdroj.lastIndexOf(" ");
+					ulice[0] = zdroj.substring(0, posledna_medzera);
+				}
+				adresy_ulice = ulice.toString();
+			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
+			} else if (attributes.porucha_misto != null) {
+				adresy_ulice = attributes.porucha_misto;
+			} else {
+				adresy_ulice = "neuvedena";
+			}
+
+			if (adresy_ulice.indexOf(", Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava, ") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava, ", "");
+			}
+			if (adresy_ulice.indexOf("Jihlava") > -1) {
+				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
+			}
+
+			var startDatume = new Date(attributes.oprava_zahajeni);
+			var endDatume = new Date(attributes.opravda_ukonceni);
+			let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+			let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+		
+			let sminuty = startDatume.getMinutes();
+			sminuty_text = sminuty.toString();
+			if (sminuty_text.length == 1) {
+				sminuty_text = "0" + sminuty_text;
+			}
+			let eminuty = endDatume.getMinutes();
+			eminuty_text = eminuty.toString();
+			if (eminuty_text.length == 1) {
+				eminuty_text = "0" + eminuty_text;
+			}
+
+			let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
+
+			let ukoncenie;
+			if (prvy_den === posledny_den) {
+				ukoncenie = endDatume.getHours() + ":" + eminuty_text;
+			} else {
+				ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+				zaciatok = zaciatok + " ";
+			}
+
+			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
+			//content = 'Nějaký content'
+			content = '<b>Oprava – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie
+
+			// Vrácení požadovaného stringu
+			return(content);
+		}
+		
+      });
+	  });
+    </script>
+	
+  </head>
+
+  <body>
+	<div id="viewDiv" class="panel-container">
+    </div>
+  </body>
+</html>
