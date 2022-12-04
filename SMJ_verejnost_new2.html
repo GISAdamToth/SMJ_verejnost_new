@@ -419,71 +419,76 @@
 							//vytvorenie pocitadla ako rozbalovacieho panela
 
 							let feature_list_node = document.createElement("div");
-							feature_list_node.classList.add("feature-list")
-							graphics_list.forEach((graphic) => {
+							if (pocty[0] + pocty[1] + pocty[2] + pocty[3] === 0) {
+								feature_list_node.innerHTML = "<p>Žádné aktuální události</p>";
+							} else {
+								feature_list_node.classList.add("feature-list")
+							
+								graphics_list.forEach((graphic) => {
 
-								// KAMIL: Klon grafiky pro výpis v panelu -> nastavení rozdílného popup
-								let graphic_clone_for_panel = graphic.clone();
+									// KAMIL: Klon grafiky pro výpis v panelu -> nastavení rozdílného popup
+									let graphic_clone_for_panel = graphic.clone();
 
-								// KAMIL: Tady zjistíš, z jaké vrstvy grafika pochází a nastavíš specifický popup pro výpis
-								if (graphic.customId === opravy.title) {
-									graphic_clone_for_panel.popupTemplate = {
-										title: "", 
-										content: createContentForOpravy
-									};
-								}
-								if (graphic.customId === planovane_odstavky.title) {
-									graphic_clone_for_panel.popupTemplate = {
-										title: "", 
-										content: createContentForOdstavky
-									};
-								}
-								if (graphic.customId === info_obcany.title) {
-									graphic_clone_for_panel.popupTemplate = {
-										title: "", 
-										content: createContentForInfo
-									};
-								}
-						  	    if (graphic.customId === odkaleni_hydrantu.title) {
-									graphic_clone_for_panel.popupTemplate = {
-										title: "", 
-										content: createContentForOdkaleni
-									};
-								}		
-								if (graphic.customId === opravy_ukoncene.title) {
-									graphic_clone_for_panel.popupTemplate = {
-										title: "", 
-										content: createContentForOpravyUk
-									};
-								}
-								// KAMIL: Inicializace Feature widgetu pro výpis = původní boční panel
-								// Pozn.: Koukni na možnosti Feature widgetu do dokumentace, pro výpis se skvěle hodí a dost se ti zjednoduší práce
-								let featureChild = new Feature({
-									container: document.createElement("div"),
-									graphic: graphic_clone_for_panel, // Speciální popup
-									map: view.map,
-									spatialReference: view.spatialReference
-								});
-								featureChild.container.addEventListener("click", function(){
-									view
-										.goTo({center: graphic.geometry, zoom: 19})
-										//.goTo({center: graphic.geometry, zoom: 15})
-										.then(function() {
-											view.popup.open({
-												features: [graphic], // Původní grafika s původním popup
-												location: graphic.geometry.centroid
-											});
-										})
-									let sirka = window.innerWidth;
-									if (sirka < 545) {
-										pocitadlo.collapse();
-										//view.popup.close();
+									// KAMIL: Tady zjistíš, z jaké vrstvy grafika pochází a nastavíš specifický popup pro výpis
+									if (graphic.customId === opravy.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForOpravy
+										};
+									}
+									if (graphic.customId === planovane_odstavky.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForOdstavky
+										};
+									}
+									if (graphic.customId === info_obcany.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForInfo
+										};
+									}
+									if (graphic.customId === odkaleni_hydrantu.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForOdkaleni
+										};
+									}		
+									if (graphic.customId === opravy_ukoncene.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForOpravyUk
+										};
+									}
+									// KAMIL: Inicializace Feature widgetu pro výpis = původní boční panel
+									// Pozn.: Koukni na možnosti Feature widgetu do dokumentace, pro výpis se skvěle hodí a dost se ti zjednoduší práce
+									let featureChild = new Feature({
+										container: document.createElement("div"),
+										graphic: graphic_clone_for_panel, // Speciální popup
+										map: view.map,
+										spatialReference: view.spatialReference
+									});
+									featureChild.container.addEventListener("click", function(){
+										view
+											.goTo({center: graphic.geometry, zoom: 19})
+											//.goTo({center: graphic.geometry, zoom: 15})
+											.then(function() {
+												view.popup.open({
+													features: [graphic], // Původní grafika s původním popup
+													location: graphic.geometry.centroid
+												});
+											})
+										let sirka = window.innerWidth;
+										if (sirka < 545) {
+											pocitadlo.collapse();
+											//view.popup.close();
+										}
+									})
+									if (graphic.customId != opravy_ukoncene.title) {
+										feature_list_node.appendChild(featureChild.container)
 									}
 								})
-								if (graphic.customId != opravy_ukoncene.title) {
-									feature_list_node.appendChild(featureChild.container)
-								}
-							})
+							}
 
 							let counter_node = document.createElement("div");
 							counter_node.innerHTML = `<div class="counterDiv">
@@ -566,59 +571,63 @@
 														<div class="pocitadlo">Další události: <h2>${(pocty[1] + pocty[3])}</h2></div> 
 														<div class="pocitadlo">Odkalení hydrantů: <h2> ${pocty[2]}</h2></div>
 													</div>`
-													
-								feature_list_node.innerHTML = '';
-								graphics_list.forEach((graphic) => {
-									let graphic_clone_for_panel = graphic.clone();
-									if (graphic.customId === opravy.title) {
-										graphic_clone_for_panel.popupTemplate = {
-											title: "", 
-											content: createContentForOpravy
-										};
-									}
-									if (graphic.customId === planovane_odstavky.title) {
-										graphic_clone_for_panel.popupTemplate = {
-											title: "", 
-											content: createContentForOdstavky
-										};
-									}
-									if (graphic.customId === info_obcany.title) {
-										graphic_clone_for_panel.popupTemplate = {
-											title: "", 
-											content: createContentForInfo
-										};
-									}
-									if (graphic.customId === odkaleni_hydrantu.title) {
-										graphic_clone_for_panel.popupTemplate = {
-											title: "", 
-											content: createContentForOdkaleni
-										};
-									}
-				
-									let featureChild = new Feature({
-										container: document.createElement("div"),
-										graphic: graphic_clone_for_panel, // Speciální popup
-										map: view.map,
-										spatialReference: view.spatialReference
-									});
-									featureChild.container.addEventListener("click", function(){
-										view
-											.goTo({center: graphic.geometry, zoom: 19})
-											.then(function() {
-												view.popup.open({
-													features: [graphic],
-													location: graphic.geometry.centroid
-												});
-											})
-										let sirka = window.innerWidth;
-										if (sirka < 545) {
-											pocitadlo.collapse();
+										
+								if (pocty[0] + pocty[1] + pocty[2] + pocty[3] === 0) {
+									feature_list_node.innerHTML = "<p>Žádné aktuální události</p>";
+								} else {
+									feature_list_node.innerHTML = '';
+									graphics_list.forEach((graphic) => {
+										let graphic_clone_for_panel = graphic.clone();
+										if (graphic.customId === opravy.title) {
+											graphic_clone_for_panel.popupTemplate = {
+												title: "", 
+												content: createContentForOpravy
+											};
+										}
+										if (graphic.customId === planovane_odstavky.title) {
+											graphic_clone_for_panel.popupTemplate = {
+												title: "", 
+												content: createContentForOdstavky
+											};
+										}
+										if (graphic.customId === info_obcany.title) {
+											graphic_clone_for_panel.popupTemplate = {
+												title: "", 
+												content: createContentForInfo
+											};
+										}
+										if (graphic.customId === odkaleni_hydrantu.title) {
+											graphic_clone_for_panel.popupTemplate = {
+												title: "", 
+												content: createContentForOdkaleni
+											};
+										}
+					
+										let featureChild = new Feature({
+											container: document.createElement("div"),
+											graphic: graphic_clone_for_panel, // Speciální popup
+											map: view.map,
+											spatialReference: view.spatialReference
+										});
+										featureChild.container.addEventListener("click", function(){
+											view
+												.goTo({center: graphic.geometry, zoom: 19})
+												.then(function() {
+													view.popup.open({
+														features: [graphic],
+														location: graphic.geometry.centroid
+													});
+												})
+											let sirka = window.innerWidth;
+											if (sirka < 545) {
+												pocitadlo.collapse();
+											}
+										})
+										if (graphic.customId != opravy_ukoncene.title) {
+											feature_list_node.appendChild(featureChild.container)
 										}
 									})
-									if (graphic.customId != opravy_ukoncene.title) {
-										feature_list_node.appendChild(featureChild.container)
-									}
-								})
+								}
 							})
 							
 							button_node.appendChild(buttonChild2)
