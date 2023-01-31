@@ -27,8 +27,9 @@
 		"esri/widgets/Feature",
 		"esri/Graphic",
 		"esri/layers/support/FeatureReductionCluster",
-		"esri/core/reactiveUtils"
-	  ], function(Map, MapView, FeatureLayer, Legend, Expand, Search, Home, WebMap, Feature, Graphic, FeatureReductionCluster, reactiveUtils) {
+		"esri/core/reactiveUtils",
+		"esri/PopupTemplate"
+	  ], function(Map, MapView, FeatureLayer, Legend, Expand, Search, Home, WebMap, Feature, Graphic, FeatureReductionCluster, reactiveUtils, PopupTemplate) {
 
 		// KAMIL: Config ---
 		const config = {
@@ -343,27 +344,83 @@
 				}
 			};
 			
-			// funkcie na vytvorenie popupu pre ukoncene opravy, no z nejakeho dovodu nefunguju
-			let createPopupTitle = (feature) => {
+
+			let template = new PopupTemplate({
+				title: setTitleInfo,
+				content: setContentInfo
+			});
+
+			function setContentInfo(feature){
+				let pcontent = "doba opravy: ";
+				let attributes = feature.graphic.attributes;
+				var sDatume = new Date(attributes.oprava_zahajeni);
+				let s_den = sDatume.getDate() + "." + (sDatume.getMonth()+1) + "." + sDatume.getFullYear();
+				var eDatume = new Date(attributes.opravda_ukonceni);
+				let e_den = eDatume.getDate() + "." + (eDatume.getMonth()+1) + "." + eDatume.getFullYear();
+				if (s_den == "1.1.1970" && e_den == "1.1.1970") {
+					pcontent = pcontent + "neuvedena";
+				}
+				if (s_den == e_den) {
+					pcontent = pcontent + s_den;
+				} else {
+					pcontent = pcontent + s_den + " - " + e_den;
+				}
+
+				var pDatume = new Date(attributes.oprava_odstavka_od);
+				let p_den = pDatume.getDate() + "." + (pDatume.getMonth()+1) + "." + pDatume.getFullYear();
+				var kDatume = new Date(attributes.oprava_odstavka_do);
+				let k_den = kDatume.getDate() + "." + (kDatume.getMonth()+1) + "." + kDatume.getFullYear();
+
+				if (p_den != "1.1.1970") {
+					if (p_den == k_den) {
+						pcontent = pcontent + p_den;
+					} else {
+						pcontent = pcontent + p_den + " - " + k_den;
+					}
+					pcontent = pcontent + "<br>doba odstávky vody: {oprava_odstavka_od} - {oprava_odstavka_do}";
+				}
+				return(pcontent);
+			}
+
+			function setTitleInfo(feature){
 				let tcontent = "ukončená oprava";
-				if (attributes.oprava_odstavka_od != null && attributes.oprava_odstavka_do != null) {
+				let attributes = feature.graphic.attributes;
+				var sDatume = new Date(attributes.oprava_odstavka_od);
+				let s_den = sDatume.getDate() + "." + (sDatume.getMonth()+1) + "." + sDatume.getFullYear();
+				if (s_den != "1.1.1970") {
+					tcontent = tcontent + " s odstávkou";
+				}
+				return(tcontent);
+			}
+
+			opravy_ukoncene.popupTemplate = template;
+
+/* 			// tak namiesto funkcii je popup pre ukoncene opravy definovany takto jednoducho
+			opravy_ukoncene.popupTemplate = {
+				outFields: ["*"],
+				title: createPopupTitle(opravy_ukoncene),
+				content: createPopupContent(opravy_ukoncene)
+				//content: "<b>ukončená oprava</b><br><p>doba opravy: {oprava_zahajeni} - {opravda_ukonceni}</p>"
+			};
+
+			// funkcie na vytvorenie popupu pre ukoncene opravy, no z nejakeho dovodu nefunguju
+			function createPopupTitle(feature) {
+				let tcontent = "ukončená oprava";
+				if (feature.graphic.attributes.oprava_odstavka_od != null && feature.attributes.oprava_odstavka_do != null) {
 					tcontent = tcontent + " s odstávkou";
 				}
 				return(tcontent);
 			}
 			
-			let createPopupContent = (feature) => {
+			function createPopupContent(feature) {
 				let pcontent = "<p>doba opravy: {oprava_zahajeni} - {opravda_ukonceni}</p>";
-				if (attributes.oprava_odstavka_od != null && attributes.oprava_odstavka_do != null) {
+				if (feature.graphic.attributes.oprava_odstavka_od != null && feature.attributes.oprava_odstavka_do != null) {
 					pcontent = pcontent + "<p>doba odstávky vody: {oprava_odstavka_od} - {oprava_odstavka_do}</p>";
 				}
 				return(pcontent);
-			}
+			} */
 			
-			// tak namiesto funkcii je popup pre ukoncene opravy definovany takto jednoducho
-			opravy_ukoncene.popupTemplate = {
-				content: "<b>ukončená oprava</b><br><p>doba opravy: {oprava_zahajeni} - {opravda_ukonceni}</p>"
-			};
+
 			
 			webmap.add(opravy_ukoncene);
 			
@@ -812,19 +869,14 @@
 		// KAMIL: V této sekci máš vytvořené funkce pro vytvoření contentu výpisů v bočním panelu, tyto je potřeba dopracovat
 		// Pro každou vrstvu samostatná funkce
 		// Funkce se spuští v nastavení popup pro klon grafiky - viz výše
-		let createContentForInfo = (feature) => {
-			// Tady inicializuješ prázdný string, do kterého pak vyskládáš podobu výpisu a tento string funcí vrátíš
-			let content;
+		function vypis(atrb, id_udalosti) {
 
-			// Přístup k atributům k programovému zpracování
-			let attributes = feature.graphic.attributes;
 			let adresy_ulice;
-
-			// ak je vyplnena nejaka adresa/adresy, ziskaj z nej ulicu/ulice
+			// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
 			// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
-			if (attributes.oprava_adresy_omezene != null) {
+			if (atrb.oprava_adresy_omezene != null) {
 				// do premennej zdroj si nacitam vsetky dotknute adresy pre danu planovanu odstavku
-				var zdroj = attributes.oprava_adresy_omezene;
+				var zdroj = atrb.oprava_adresy_omezene;
 				// najdem si poziciu prvej bodkociarky a ciarky, ak nie su, tak je ich pozicia -1
 				var strednikpos = zdroj.indexOf(";");
 				var ciarkapos = zdroj.indexOf(",");
@@ -855,13 +907,13 @@
 				adresy_ulice = ulice.toString();
 
 			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
-			} else if (attributes.porucha_misto != null) {
-				adresy_ulice = attributes.porucha_misto;
+			} else if (atrb.porucha_misto != null) {
+				adresy_ulice = atrb.porucha_misto;
 			} else {
 				adresy_ulice = "neuvedena";
 			}
 
-			// ak sa v uliciach nachadza string "Jihlava", je tento string odstraneny, ak sa tam nachadza iba takyto string, je nahradeny hodnotou "neuvedena" (nodata) 
+			// ak sa v uliciach nachadza string "Jihlava", je tento string odstraneny, ak sa tam nachadza iba takyto string, je nahradeny hodnotou "neuvedena" (nodata)
 			if (adresy_ulice.indexOf(", Jihlava") > -1) {
 				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
 			}
@@ -872,224 +924,88 @@
 				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
 			}
 
-			// ulozenie datumov (den, mesiac, rok) do stringov
-			var startDatume = new Date(attributes.oprava_zahajeni);
-			var endDatume = new Date(attributes.opravda_ukonceni);
-			let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
-			let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
-		
-			// ulozenie minut do stringov
-			let sminuty = startDatume.getMinutes();
-			sminuty_text = sminuty.toString();
-			if (sminuty_text.length == 1) {
-				sminuty_text = "0" + sminuty_text;
-			}
-			let eminuty = endDatume.getMinutes();
-			eminuty_text = eminuty.toString();
-			if (eminuty_text.length == 1) {
-				eminuty_text = "0" + eminuty_text;
-			}
+			// tu sa kod funkcie vypis deli na dve casti podla typu udalosti (id_udalosti)
+			// prva je pre ukoncene opravy, kde je vypis v zozname trochu iny ako pre opravy, info pre obcanov a planovane odstavky
+			// kod pre tieto 3 udalosti je vo vetve else
+			if (id_udalosti == "opr_uk"){
+				let zaciatok;
+				if (atrb.oprava_zahajeni === null && atrb.opravda_ukonceni === null) {
+					zaciatok = "neuvedeno";
+				}
+				if (atrb.oprava_zahajeni != null && atrb.opravda_ukonceni === null) {
+					let startDatume = new Date(atrb.oprava_zahajeni);
+					let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+					zaciatok = prvy_den;
+				}
+				if (atrb.oprava_zahajeni === null && atrb.opravda_ukonceni != null) {
+					let endDatume = new Date(atrb.opravda_ukonceni);
+					let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+					zaciatok = posledny_den;
+				}
+				if (atrb.oprava_zahajeni != null && atrb.opravda_ukonceni != null) {
+					let startDatume = new Date(atrb.oprava_zahajeni);
+					let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+					let endDatume = new Date(atrb.opravda_ukonceni);
+					let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+					zaciatok = prvy_den + " - " + posledny_den;
+					if (prvy_den === posledny_den) {
+						zaciatok = posledny_den;
+					}
+				}
+				return(adresy_ulice + '<br> datum: ' + zaciatok);
 
-			// skladanie stringov pre vypis, zaciatocny cas je vzdy ten isty (den, mesiac, rok, hodiny, minuty)
-			let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
-			let ukoncenie;
-			// ak je udalost ukoncena v ten isty den, vypis casu bude v tomto tvare: den, mesiac, rok, zaciatocne hodiny a minuty - konecne hodiny a minuty
-			// v opacnom pripade je vypis casu v tomto tvare: zaciatocny den, mesiac, rok, hodiny a minuty - konecny den, mesiac, rok, hodiny a minuty
-			if (prvy_den === posledny_den) {
-				ukoncenie = endDatume.getHours() + ":" + eminuty_text;
 			} else {
-				ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
-				zaciatok = zaciatok + " ";
+				// ulozenie datumov (den, mesiac, rok) do stringov
+				var startDatume = new Date(atrb.oprava_zahajeni);
+				var endDatume = new Date(atrb.opravda_ukonceni);
+				let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+				let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+			
+				// ulozenie minut do stringov
+				let sminuty = startDatume.getMinutes();
+				sminuty_text = sminuty.toString();
+				if (sminuty_text.length == 1) {
+					sminuty_text = "0" + sminuty_text;
+				}
+				let eminuty = endDatume.getMinutes();
+				eminuty_text = eminuty.toString();
+				if (eminuty_text.length == 1) {
+					eminuty_text = "0" + eminuty_text;
+				}
+
+				// skladanie stringov pre vypis, zaciatocny cas je vzdy ten isty (den, mesiac, rok, hodiny, minuty)
+				let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
+				let ukoncenie;
+				// ak je udalost ukoncena v ten isty den, vypis casu bude v tomto tvare: den, mesiac, rok, zaciatocne hodiny a minuty - konecne hodiny a minuty
+				// v opacnom pripade je vypis casu v tomto tvare: zaciatocny den, mesiac, rok, hodiny a minuty - konecny den, mesiac, rok, hodiny a minuty
+				if (prvy_den === posledny_den) {
+					ukoncenie = endDatume.getHours() + ":" + eminuty_text;
+				} else {
+					ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+					zaciatok = zaciatok + " ";
+				}
+				return(adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie);
 			}
+		}
 
-			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
-			content = '<b>Informace pro občany – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie 
-
-			// Vrácení požadovaného stringu
+		let createContentForInfo = (feature) => {
+			let content;
+			let attributes = feature.graphic.attributes;
+			content = '<b>Informace pro občany – {porucha_typ}</b> <br>ulice: ' + vypis(attributes, "info");
 			return(content);
 		}
 
 		let createContentForOpravy = (feature) => {
-			// Tady inicializuješ prázdný string, do kterého pak vyskládáš podobu výpisu a tento string funcí vrátíš
 			let content;
-
-			// Přístup k atributům k progamovému zpracování
 			let attributes = feature.graphic.attributes;
-
-			let adresy_ulice;
-			// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
-			// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
-			if (attributes.oprava_adresy_omezene != null) {
-				// do premennej zdroj si nacitam vsetky dotknute adresy pre danu planovanu odstavku
-				var zdroj = attributes.oprava_adresy_omezene;
-				// najdem si poziciu prvej bodkociarky a ciarky, ak nie su, tak je ich pozicia -1
-				var strednikpos = zdroj.indexOf(";");
-				var ciarkapos = zdroj.indexOf(",");
-				var ulice = [];
-				
-				// ak sa bodkociarka nachadza, znamena to, ze tam je viac ulic
-				if (strednikpos > -1) {
-					// zdroj si rozsekam na pole ulice, prvok je ulica so vsetkymi cislami
-					ulice = zdroj.split(";");
-					
-					for (let j = 0; j < ulice.length; j++) {
-						// pre kazdy prvok sa najde pozicia prvej ciarky
-						var cipos = ulice[j].indexOf(",");
-						
-						if (cipos > -1) {
-							ulice[j] = ulice[j].substring(0, cipos);
-						}
-						let posledna_medzera = ulice[j].lastIndexOf(" ");
-						ulice[j] = ulice[j].substring(0, posledna_medzera);
-					}
-				} else {
-					if (ciarkapos > -1) {
-						zdroj = zdroj.substring(0, ciarkapos);
-					}
-					let posledna_medzera = zdroj.lastIndexOf(" ");
-					ulice[0] = zdroj.substring(0, posledna_medzera);
-				}
-				adresy_ulice = ulice.toString();
-			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
-			} else if (attributes.porucha_misto != null) {
-				adresy_ulice = attributes.porucha_misto;
-			} else {
-				adresy_ulice = "neuvedena";
-			}
-
-			if (adresy_ulice.indexOf(", Jihlava") > -1) {
-				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
-			}
-			if (adresy_ulice.indexOf("Jihlava, ") > -1) {
-				adresy_ulice = adresy_ulice.replace("Jihlava, ", "");
-			}
-			if (adresy_ulice.indexOf("Jihlava") > -1) {
-				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
-			}
-
-			var startDatume = new Date(attributes.oprava_zahajeni);
-			var endDatume = new Date(attributes.opravda_ukonceni);
-			let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
-			let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
-		
-			let sminuty = startDatume.getMinutes();
-			sminuty_text = sminuty.toString();
-			if (sminuty_text.length == 1) {
-				sminuty_text = "0" + sminuty_text;
-			}
-			let eminuty = endDatume.getMinutes();
-			eminuty_text = eminuty.toString();
-			if (eminuty_text.length == 1) {
-				eminuty_text = "0" + eminuty_text;
-			}
-
-			let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
-
-			let ukoncenie;
-			if (prvy_den === posledny_den) {
-				ukoncenie = endDatume.getHours() + ":" + eminuty_text;
-			} else {
-				ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
-				zaciatok = zaciatok + " ";
-			}
-
-			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
-			//content = 'Nějaký content'
-			content = '<b>Oprava – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie
-
-			// Vrácení požadovaného stringu
+			content = '<b>Oprava – {porucha_typ}</b> <br>ulice: ' + vypis(attributes, "opr");
 			return(content);
 		}
 
 		let createContentForOdstavky = (feature) => {
-			// Tady inicializuješ prázdný string, do kterého pak vyskládáš podobu výpisu a tento string funcí vrátíš
 			let content;
-
-			// Přístup k atributům k progamovému zpracování
 			let attributes = feature.graphic.attributes;
-			let adresy_ulice;
-
-			// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
-			// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
-			if (attributes.oprava_adresy_omezene != null) {
-				// do premennej zdroj si nacitam vsetky dotknute adresy pre danu planovanu odstavku
-				var zdroj = attributes.oprava_adresy_omezene;
-				// najdem si poziciu prvej bodkociarky a ciarky, ak nie su, tak je ich pozicia -1
-				var strednikpos = zdroj.indexOf(";");
-				var ciarkapos = zdroj.indexOf(",");
-				var ulice = [];
-				
-				// ak sa bodkociarka nachadza, znamena to, ze tam je viac ulic
-				if (strednikpos > -1) {
-					// zdroj si rozsekam na pole ulice, prvok je ulica so vsetkymi cislami
-					ulice = zdroj.split(";");
-					
-					for (let j = 0; j < ulice.length; j++) {
-						// pre kazdy prvok sa najde pozicia prvej ciarky
-						var cipos = ulice[j].indexOf(",");
-						
-						if (cipos > -1) {
-							ulice[j] = ulice[j].substring(0, cipos);
-						}
-						let posledna_medzera = ulice[j].lastIndexOf(" ");
-						ulice[j] = ulice[j].substring(0, posledna_medzera);
-					}
-				} else {
-					if (ciarkapos > -1) {
-						zdroj = zdroj.substring(0, ciarkapos);
-					}
-					let posledna_medzera = zdroj.lastIndexOf(" ");
-					ulice[0] = zdroj.substring(0, posledna_medzera);
-				}
-				adresy_ulice = ulice.toString();
-
-			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
-			} else if (attributes.porucha_misto != null) {
-				adresy_ulice = attributes.porucha_misto;
-			} else {
-				adresy_ulice = "neuvedena";
-			}
-
-			if (adresy_ulice.indexOf(", Jihlava") > -1) {
-				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
-			}
-			if (adresy_ulice.indexOf("Jihlava, ") > -1) {
-				adresy_ulice = adresy_ulice.replace("Jihlava, ", "");
-			}
-			if (adresy_ulice.indexOf("Jihlava") > -1) {
-				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
-			}
-
-			var startDatume = new Date(attributes.oprava_zahajeni);
-			var endDatume = new Date(attributes.opravda_ukonceni);
-			let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
-			let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
-		
-			let sminuty = startDatume.getMinutes();
-			sminuty_text = sminuty.toString();
-			if (sminuty_text.length == 1) {
-				sminuty_text = "0" + sminuty_text;
-			}
-			let eminuty = endDatume.getMinutes();
-			eminuty_text = eminuty.toString();
-			if (eminuty_text.length == 1) {
-				eminuty_text = "0" + eminuty_text;
-			}
-
-			let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
-			let ukoncenie;
-			
-			if (prvy_den === posledny_den) {
-				ukoncenie = endDatume.getHours() + ":" + eminuty_text;
-			} else {
-				ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
-				zaciatok = zaciatok + " ";
-			}
-
-			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
-			content = '<b>Plánovaná odstávka – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie
-
-			// Vrácení požadovaného stringu
+			content = '<b>Plánovaná odstávka – {porucha_typ}</b> <br>ulice: ' + vypis(attributes, "odst");
 			return(content);
 		}
 
@@ -1116,93 +1032,11 @@
 			// Vrácení požadovaného stringu
 			return(content);
 		}
-		
-		
+
 		let createContentForOpravyUk = (feature) => {
-			// Tady inicializuješ prázdný string, do kterého pak vyskládáš podobu výpisu a tento string funcí vrátíš
 			let content;
-
-			// Přístup k atributům k progamovému zpracování
 			let attributes = feature.graphic.attributes;
-
-			let adresy_ulice;
-			// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
-			// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
-			if (attributes.oprava_adresy_omezene != null) {
-				// do premennej zdroj si nacitam vsetky dotknute adresy pre danu planovanu odstavku
-				var zdroj = attributes.oprava_adresy_omezene;
-				// najdem si poziciu prvej bodkociarky a ciarky, ak nie su, tak je ich pozicia -1
-				var strednikpos = zdroj.indexOf(";");
-				var ciarkapos = zdroj.indexOf(",");
-				var ulice = [];
-				
-				// ak sa bodkociarka nachadza, znamena to, ze tam je viac ulic
-				if (strednikpos > -1) {
-					// zdroj si rozsekam na pole ulice, prvok je ulica so vsetkymi cislami
-					ulice = zdroj.split(";");
-					
-					for (let j = 0; j < ulice.length; j++) {
-						// pre kazdy prvok sa najde pozicia prvej ciarky
-						var cipos = ulice[j].indexOf(",");
-						
-						if (cipos > -1) {
-							ulice[j] = ulice[j].substring(0, cipos);
-						}
-						let posledna_medzera = ulice[j].lastIndexOf(" ");
-						ulice[j] = ulice[j].substring(0, posledna_medzera);
-					}
-				} else {
-					if (ciarkapos > -1) {
-						zdroj = zdroj.substring(0, ciarkapos);
-					}
-					let posledna_medzera = zdroj.lastIndexOf(" ");
-					ulice[0] = zdroj.substring(0, posledna_medzera);
-				}
-				adresy_ulice = ulice.toString();
-			// ak nie je vyplnena ziadna adresa v atribute oprava_adresy_omezene, zober ulicu z porucha_misto
-			} else if (attributes.porucha_misto != null) {
-				adresy_ulice = attributes.porucha_misto;
-			} else {
-				adresy_ulice = "neuvedena";
-			}
-
-			if (adresy_ulice.indexOf(", Jihlava") > -1) {
-				adresy_ulice = adresy_ulice.replace(", Jihlava", "");
-			}
-			if (adresy_ulice.indexOf("Jihlava, ") > -1) {
-				adresy_ulice = adresy_ulice.replace("Jihlava, ", "");
-			}
-			if (adresy_ulice.indexOf("Jihlava") > -1) {
-				adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
-			}
-
-			let zaciatok;
-			if (attributes.oprava_zahajeni === null && attributes.opravda_ukonceni === null) {
-				zaciatok = "neuvedeno";
-			}
-			if (attributes.oprava_zahajeni != null && attributes.opravda_ukonceni === null) {
-				let startDatume = new Date(attributes.oprava_zahajeni);
-				let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
-				zaciatok = prvy_den;
-			}
-			if (attributes.oprava_zahajeni === null && attributes.opravda_ukonceni != null) {
-				let endDatume = new Date(attributes.opravda_ukonceni);
-				let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
-				zaciatok = posledny_den;
-			}
-			if (attributes.oprava_zahajeni != null && attributes.opravda_ukonceni != null) {
-				let startDatume = new Date(attributes.oprava_zahajeni);
-				let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
-				let endDatume = new Date(attributes.opravda_ukonceni);
-				let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
-				zaciatok = prvy_den + " - " + posledny_den;
-				if (prvy_den === posledny_den) {
-					zaciatok = posledny_den;
-				}
-			}
-
-			content = '<b>Oprava – {porucha_typ}</b> <br>ulice: ' + adresy_ulice + '<br> datum: ' + zaciatok
-
+			content = '<b>Oprava – {porucha_typ}</b> <br>ulice: ' + vypis(attributes, "opr_uk");
 			return(content);
 		}
 		
