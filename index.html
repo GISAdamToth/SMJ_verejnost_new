@@ -76,7 +76,7 @@
 				}
 			},
 			center: [15.585, 49.403],
-			zoom: 4,
+			zoom: 3,
 
 			// definovanie zoom levelov, tzv. LODs (levels of detail), pre toto view je ich definovanych 18 (0-17)
 		    constraints: {
@@ -584,7 +584,8 @@
 								ukonc_clicked = true;
 								buttonChild1.innerHTML = "<button class='clicked'>Ukončené opravy</button>";
 								buttonChild2.innerHTML = "<button class='buttons'>Aktuální události</button>";
-								pocitadlo.iconNumber = pocty[4];
+								let aktualny_pocet;
+								aktualny_pocet = 0;
 
 								opravy_ukoncene.visible = true;
 								opravy_sublayer.visible = false;
@@ -593,10 +594,6 @@
 								info_obcany_sublayer.visible = false;
 								nemovitosti_sublayer.visible = false;
 								cisterny_sublayer.visible = false;
-								
-								counter_node.innerHTML = `<div class="counterDiv">
-														<div class="pocitadlo1">Ukončené opravy: <h2> ${pocty[4]}</h2></div> 
-													</div>`
 													
 								feature_list_node.innerHTML = '';
 								graphics_list.forEach((graphic) => {
@@ -643,8 +640,13 @@
 									var extent = view.extent;
 									if (graphic.customId === opravy_ukoncene.title && extent.contains(graphic.geometry)) {
 										feature_list_node.appendChild(featureChild.container)
+										aktualny_pocet = aktualny_pocet + 1
 									}
 								})
+								counter_node.innerHTML = `<div class="counterDiv">
+														<div class="pocitadlo1">Ukončené opravy: <h2> ${aktualny_pocet}</h2></div> 
+													</div>`
+								pocitadlo.iconNumber = aktualny_pocet;
 							})
 							
 							// zoznam s ukoncenymi opravami je zavisly na aktualnom extente, to znamena, ze v zozname su vypisane iba tie ukoncene opravy, ktore uzivatel vidi v mape
@@ -702,6 +704,9 @@
 												aktualny_pocet = aktualny_pocet + 1
 											}								
 										})
+										counter_node.innerHTML = `<div class="counterDiv">
+														<div class="pocitadlo1">Ukončené opravy: <h2> ${aktualny_pocet}</h2></div> 
+													</div>`
 										pocitadlo.iconNumber = aktualny_pocet;
 									}
 								}
@@ -1022,7 +1027,7 @@
 
 			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
 			//content = 'Nějaký content'
-			content = '<b>Odkalení hydrantu</b> <br>zahájení: ' + startString + '<br>ulice: {text}'
+			content = '<b>Odkalení hydrantu</b> <br>zahájení: ' + startString + '<br>lokalita: {text}'
 			
 			// Vrácení požadovaného stringu
 			return(content);
