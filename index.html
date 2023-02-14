@@ -474,6 +474,38 @@
 									graphics_list.push(graphic)
 								})
 							
+							// funkcia pouzivana vo 'featureChild.container.addEventListener("click" ...)'
+							// po kliknuti na udalost v zozname sa mapa prizoomuje a vycentruje na kliknutu udalost
+							function panel_click(g) {
+								// ak je zoom level mensi ako 9 alebo vacsi rovny 13, mapa sa prizoomuje na level 9
+								if (view.zoom < 9 || view.zoom >= 13){
+									view
+										.goTo({center: g.geometry, zoom: 9})
+										.then(function() {
+											view.popup.open({
+												features: [g], // Původní grafika s původním popup
+												location: g.geometry.centroid
+											});
+										})
+								// ak je vsak zoom vacsi rovny 9 a zaroven mensi ako 13, mapa sa bude zoomovat vzdy o 1 level blizsie
+								} else if (view.zoom < 13){
+									view
+										.goTo({center: g.geometry, zoom: view.zoom + 1})
+										.then(function() {
+											view.popup.open({
+												features: [g], // Původní grafika s původním popup
+												location: g.geometry.centroid
+											});
+										})
+								}
+
+								// ak je mapa otvorena na mobile, tak po kliknuti na udalost v zozname sa bocny panel zbali
+								let sirka = window.innerWidth;
+								if (sirka < 545) {
+									pocitadlo.collapse();
+								}
+							}
+
 							//vytvorenie pocitadla
 							let feature_list_node = document.createElement("div");
 							if (pocty[0] + pocty[1] + pocty[2] + pocty[3] === 0) {
@@ -529,32 +561,7 @@
 
 									// pridanie event listenera po kliknuti na polozku v zozname (featureChild.container): zoom a vycentrovanie mapy na kliknutu udalost
 									featureChild.container.addEventListener("click", function(){
-										if (view.zoom < 9){
-											view
-												.goTo({center: graphic.geometry, zoom: 9})
-												.then(function() {
-													view.popup.open({
-														features: [graphic], // Původní grafika s původním popup
-														location: graphic.geometry.centroid
-													});
-												})
-										} else {
-											view
-												.goTo({center: graphic.geometry, zoom: view.zoom + 1})
-												.then(function() {
-													view.popup.open({
-														features: [graphic], // Původní grafika s původním popup
-														location: graphic.geometry.centroid
-													});
-												})
-										}
-
-										// ak je mapa otvorena na mobile, tak po kliknuti na udalost v zozname sa bocny panel zbali
-										let sirka = window.innerWidth;
-										if (sirka < 545) {
-											pocitadlo.collapse();
-											//view.popup.close();
-										}
+										panel_click(graphic);
 									})
 									if (graphic.customId != opravy_ukoncene.title) {
 										feature_list_node.appendChild(featureChild.container)
@@ -575,7 +582,41 @@
 							button_node.setAttribute("id", "buttonDiv");
 							let buttonChild1 = document.createElement("div");
 							let buttonChild2 = document.createElement("div");
-							let highlightSelect;
+
+							// funkcia, ktora do bocneho panelu prida ukoncene opravy, ale iba tie, ktore su prave viditelne v mape
+							// dalej tieto opravy spocita a tento pocet nahra do pocitadla a do maleho ciselka pri zbalenom paneli
+							function opravy_uk_panel() {
+								feature_list_node.innerHTML = '';
+								let aktualny_pocet;
+								aktualny_pocet = 0;
+								graphics_list.forEach((graphic) => {
+									let graphic_clone_for_panel = graphic.clone();
+									if (graphic.customId === opravy_ukoncene.title) {
+										graphic_clone_for_panel.popupTemplate = {
+											title: "", 
+											content: createContentForOpravyUk
+										};
+									}
+									let featureChild = new Feature({
+										container: document.createElement("div"),
+										graphic: graphic_clone_for_panel, // Speciální popup
+										map: view.map,
+										spatialReference: view.spatialReference
+									});
+									featureChild.container.addEventListener("click", function(){
+										panel_click(graphic);
+									})
+									var extent = view.extent;
+									if (graphic.customId === opravy_ukoncene.title && extent.contains(graphic.geometry)) {
+										feature_list_node.appendChild(featureChild.container)
+										aktualny_pocet = aktualny_pocet + 1
+									}
+								})
+								counter_node.innerHTML = `<div class="counterDiv">
+														<div class="pocitadlo1">Ukončené opravy (viditelné): <h2> ${aktualny_pocet}</h2></div> 
+													</div>`
+								pocitadlo.iconNumber = aktualny_pocet;
+							}
 
 							// mam to trosku nelogicky spravene, buttonChild1 su ukoncene opravy a buttonChild2 su aktualne opravy, v mape je to vsak naopak (zlava su prve aktualne, az potom ukoncene)
 							buttonChild1.innerHTML = "<button class='buttons'>Ukončené opravy</button>";
@@ -584,8 +625,6 @@
 								ukonc_clicked = true;
 								buttonChild1.innerHTML = "<button class='clicked'>Ukončené opravy</button>";
 								buttonChild2.innerHTML = "<button class='buttons'>Aktuální události</button>";
-								let aktualny_pocet;
-								aktualny_pocet = 0;
 
 								opravy_ukoncene.visible = true;
 								opravy_sublayer.visible = false;
@@ -595,58 +634,8 @@
 								nemovitosti_sublayer.visible = false;
 								cisterny_sublayer.visible = false;
 													
-								feature_list_node.innerHTML = '';
-								graphics_list.forEach((graphic) => {
-									let graphic_clone_for_panel = graphic.clone();
-									if (graphic.customId === opravy_ukoncene.title) {
-										graphic_clone_for_panel.popupTemplate = {
-											title: "", 
-											content: createContentForOpravyUk
-										};
-									}
-				
-									let featureChild = new Feature({
-										container: document.createElement("div"),
-										graphic: graphic_clone_for_panel, // Speciální popup
-										map: view.map,
-										spatialReference: view.spatialReference
-									});
-									featureChild.container.addEventListener("click", function(){
-										if (view.zoom < 9){
-											view
-												.goTo({center: graphic.geometry, zoom: 9})
-												.then(function() {
-													view.popup.open({
-														features: [graphic], // Původní grafika s původním popup
-														location: graphic.geometry.centroid
-													});
-												})
-										} else {
-											view
-												.goTo({center: graphic.geometry, zoom: view.zoom + 1})
-												.then(function() {
-													view.popup.open({
-														features: [graphic], // Původní grafika s původním popup
-														location: graphic.geometry.centroid
-													});
-												})
-										}
-										
-										let sirka = window.innerWidth;
-										if (sirka < 545) {
-											pocitadlo.collapse();
-										}
-									})
-									var extent = view.extent;
-									if (graphic.customId === opravy_ukoncene.title && extent.contains(graphic.geometry)) {
-										feature_list_node.appendChild(featureChild.container)
-										aktualny_pocet = aktualny_pocet + 1
-									}
-								})
-								counter_node.innerHTML = `<div class="counterDiv">
-														<div class="pocitadlo1">Ukončené opravy: <h2> ${aktualny_pocet}</h2></div> 
-													</div>`
-								pocitadlo.iconNumber = aktualny_pocet;
+								opravy_uk_panel();
+								view.popup.close();
 							})
 							
 							// zoznam s ukoncenymi opravami je zavisly na aktualnom extente, to znamena, ze v zozname su vypisane iba tie ukoncene opravy, ktore uzivatel vidi v mape
@@ -654,60 +643,7 @@
 								() => view.stationary === true,
 								() => {
 									if(ukonc_clicked === true) {
-										feature_list_node.innerHTML = '';
-										let aktualny_pocet;
-										aktualny_pocet = 0;
-										graphics_list.forEach((graphic) => {
-											let graphic_clone_for_panel = graphic.clone();
-											if (graphic.customId === opravy_ukoncene.title) {
-												graphic_clone_for_panel.popupTemplate = {
-													title: "", 
-													content: createContentForOpravyUk
-												};
-											}
-						
-											let featureChild = new Feature({
-												container: document.createElement("div"),
-												graphic: graphic_clone_for_panel, // Speciální popup
-												map: view.map,
-												spatialReference: view.spatialReference
-											});
-											featureChild.container.addEventListener("click", function(){
-												if (view.zoom < 9){
-													view
-														.goTo({center: graphic.geometry, zoom: 9})
-														.then(function() {
-															view.popup.open({
-																features: [graphic], // Původní grafika s původním popup
-																location: graphic.geometry.centroid
-															});
-														})
-												} else {
-													view
-														.goTo({center: graphic.geometry, zoom: view.zoom + 1})
-														.then(function() {
-															view.popup.open({
-																features: [graphic], // Původní grafika s původním popup
-																location: graphic.geometry.centroid
-															});
-														})
-												}
-												
-												let sirka = window.innerWidth;
-												if (sirka < 545) {
-													pocitadlo.collapse();
-												}
-											})
-											var extent = view.extent;
-											if (graphic.customId === opravy_ukoncene.title && extent.contains(graphic.geometry)) {
-												feature_list_node.appendChild(featureChild.container)
-												aktualny_pocet = aktualny_pocet + 1
-											}								
-										})
-										counter_node.innerHTML = `<div class="counterDiv">
-														<div class="pocitadlo1">Ukončené opravy: <h2> ${aktualny_pocet}</h2></div> 
-													</div>`
-										pocitadlo.iconNumber = aktualny_pocet;
+										opravy_uk_panel();
 									}
 								}
 							);
@@ -772,36 +708,14 @@
 											spatialReference: view.spatialReference
 										});
 										featureChild.container.addEventListener("click", function(){
-											if (view.zoom < 9){
-												view
-													.goTo({center: graphic.geometry, zoom: 9})
-													.then(function() {
-														view.popup.open({
-															features: [graphic], // Původní grafika s původním popup
-															location: graphic.geometry.centroid
-														});
-													})
-											} else {
-												view
-													.goTo({center: graphic.geometry, zoom: view.zoom + 1})
-													.then(function() {
-														view.popup.open({
-															features: [graphic], // Původní grafika s původním popup
-															location: graphic.geometry.centroid
-														});
-													})
-											}
-											
-											let sirka = window.innerWidth;
-											if (sirka < 545) {
-												pocitadlo.collapse();
-											}
+											panel_click(graphic);
 										})
 										if (graphic.customId != opravy_ukoncene.title) {
 											feature_list_node.appendChild(featureChild.container)
 										}
 									})
 								}
+								view.popup.close();
 							})
 							// pridanie buttonChildov 1 a 2 do casti button_node
 							button_node.appendChild(buttonChild2)
