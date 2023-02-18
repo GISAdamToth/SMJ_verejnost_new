@@ -176,7 +176,7 @@
 		});
 		
 		// pokus s defaultne rozbalenou legendou na PC
-		/* let mybool; 
+/* 		let mybool; 
 		let sirka_okna = window.innerWidth; 
 		if (sirka_okna >= 545) { 
 			 mybool = true;
@@ -469,22 +469,6 @@
 							
 							opravy_ukoncene.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
 								pocty[4] = result.features.length;
-								
-								result.features.sort(function(a, b){
-									let x = a.attributes.oprava_zahajeni;
-									if (a.attributes.oprava_zahajeni === null) {
-										x = a.attributes.opravda_ukonceni;
-									}
-									let y = b.attributes.oprava_zahajeni;
-									if (b.attributes.oprava_zahajeni === null) {
-										y = b.attributes.opravda_ukonceni;
-									}
-									if (x < y) {return 1;}
-									if (x > y) {return -1;}
-									if (x === y && a.attributes.opravda_ukonceni < b.attributes.opravda_ukonceni) {return 1;}
-									return 0;
-								}); 
-								
 								result.features.forEach((graphic) => {
 									graphic.customId = opravy_ukoncene.title;
 									graphics_list.push(graphic)
