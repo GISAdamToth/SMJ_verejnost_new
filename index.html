@@ -296,7 +296,7 @@
 
 			// nacitanie vrstvy opravy_ukoncene ako FeatureLayer z dovodu zhlukovania, ktore nie je mozne vytvorit pre vrstvu z webovej mapy
 			const opravy_ukoncene = new FeatureLayer({
-				url: "https://gis.jihlava-city.cz/server/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/7",
+				url: "https://gis.jihlava-city.cz/server1/rest/services/verejnost/SMJ_PaVaK_verejnost/MapServer/7",
 				outFields: ["porucha_typ", "objectid", "oprava_zahajeni", "opravda_ukonceni", "oprava_odstavka_od", "oprava_odstavka_do", "oprava_adresy_omezene", "porucha_misto"],
 				title: "Ukončené opravy"
 			});
@@ -470,6 +470,8 @@
 							opravy_ukoncene.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
 								pocty[4] = result.features.length;
 								
+								// napad: namiesto null alebo 1.1.1970 priradit datum mensi ako 5.1.2021, napr. 1.1.2019
+								// potom by to mozno mohlo fungovat s tym porovnavanim podla datumu ukoncenia
 								result.features.sort(function(a, b){
 									let x = a.attributes.oprava_zahajeni;
 									if (a.attributes.oprava_zahajeni === null) {
@@ -801,6 +803,9 @@
 		function vypis(atrb, id_udalosti) {
 
 			let adresy_ulice;
+
+			//adresy_ulice = atrb.oprava_adresy_omezene + "<br> porucha misto: " + atrb.porucha_misto;
+
 			// ak je vyplnena nejaka adresa(y), ziskaj z nej ulicu(e)
 			// ak je oprava_adresy_omezene null, tak nech si to zoberie z atributu misto poruchy, cp
 			if (atrb.oprava_adresy_omezene != null) {
@@ -956,7 +961,7 @@
 
 			// Logika výpisu - zde píšeš tvou původní logiku, tzn. když je atribut null, pak vypiš to, když je atribut něco jiného, vypiš...
 			//content = 'Nějaký content'
-			content = '<b>Odkalení hydrantu</b> <br>zahájení: ' + startString + '<br>lokalita: {text}'
+			content = '<b>Odkalení hydrantu</b> <br>lokalita: {text} <br>zahájení: ' + startString
 			
 			// Vrácení požadovaného stringu
 			return(content);
