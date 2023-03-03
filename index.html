@@ -24,7 +24,7 @@
 					"esri/views/MapView",
 					"esri/layers/FeatureLayer",
 					"esri/widgets/Legend",
-						"esri/widgets/Expand",
+					"esri/widgets/Expand",
 					"esri/widgets/Search",
 					"esri/widgets/Home",
 					"esri/WebMap",
@@ -57,15 +57,30 @@
 						}
 					}
 
+
+/* 					let basemap = new Basemap({
+						portalItem: {
+							//id: "8dda0e7b5e2d4fafa80132d59122268c"
+							id: "ea3befe305494bb5b2acd77e1b3135dc"  // Imagery Hybrid
+						}
+					}); */
+
 					// nacitanie webmapy cez portalitem id a portal url
 					const webmap = new WebMap({
-					portalItem: {
-						id: "9756a74af46c4d9f97e0f681b021ea12",
-						portal: {
-							url: "https://gis.jihlava-city.cz/portal/"
+						portalItem: {
+							id: "9756a74af46c4d9f97e0f681b021ea12",
+							portal: {
+								url: "https://gis.jihlava-city.cz/portal/"
+							}
 						}
-					}
 					});
+
+/* 					const basemapGallery = new BasemapGallery({
+						view: view,
+						source: [Basemap.fromId("topo-vector"), Basemap.fromId("hybrid")] // autocasts to LocalBasemapsSource
+					});
+
+					view.ui.add(basemapGallery, "top-right"); */
 
 					// vytvorenie view, ktore obsahuje nacitanu webmapu, ma definovane domovske zobrazenie pomocou suradnic a zoom levelu
 					const view = new MapView({
@@ -300,6 +315,7 @@
 						// definovanie zhlukovania
 						opravy_ukoncene.featureReduction = {
 							type: "cluster",
+							maxScale: 2000,
 							labelingInfo: [{
 								labelExpressionInfo: {
 								expression: "$feature.cluster_count"
@@ -339,13 +355,14 @@
 							}
 						};
 						
-
+						
+						// vytvorenie popuptemplate pre ukoncene opravy
 						let template = new PopupTemplate({
 							title: setTitleInfo,
 							content: setContentInfo
 						});
 
-
+						// funkcia na obsah popupu
 						function setContentInfo(feature){
 							let pcontent = "doba opravy: ";
 							let attributes = feature.graphic.attributes;
@@ -394,7 +411,7 @@
 							return(pcontent);
 						}
 
-
+						// funkcia na title popupu
 						function setTitleInfo(feature){
 							let tcontent = "ukončená oprava";
 							let attributes = feature.graphic.attributes;
@@ -464,9 +481,8 @@
 										
 										opravy_ukoncene.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
 											pocty[4] = result.features.length;
-											
-											// napad: namiesto null alebo 1.1.1970 priradit datum mensi ako 5.1.2021, napr. 1.1.2019
-											// potom by to mozno mohlo fungovat s tym porovnavanim podla datumu ukoncenia
+
+											// zoradenie ukoncenych oprav podla datumu zacatia opravy
 											result.features.sort(function(a, b){
 												let x = a.attributes.oprava_zahajeni;
 												if (a.attributes.oprava_zahajeni === null) {
