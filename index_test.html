@@ -243,126 +243,145 @@
 						// Mapová služba
 						var main_service = webmap.findLayerById(config.service_udalosti.id);
 						document.getElementById("demo").innerHTML = "default state";
-						let g = 0;
+						document.getElementById("demo1").innerHTML = "waiting for data change";
 						let h = 0;
 						main_service.refreshInterval = 0.1;
-						main_service.on("refresh", function(event){
-							if (event.dataChanged && g === 0){
-								h = h+1;
-								document.getElementById("demo").innerHTML = "data sa nezmenili, funguje to " + h;
-							} else {
-								g = g+1;
-								document.getElementById("demo").innerHTML = "data sa zmenili " + g + "-krat, funguje to";
 
-								graphics_list = [];
+/* 						reactiveUtils.watch(
+							() => view.updating,
+							(updating) => {
+								h = h+1;
+								document.getElementById("demo").innerHTML = "zmenilo sa view, funguje to " + h;
+							}
+						); */
+
+						main_service.on("refresh", function(event){
+							if (event.dataChanged){
+								h = h+1;
+								document.getElementById("demo").innerHTML = "refresh interval triggered refresh event " + h;
+
+								temp_g_list = [];
 								opravy.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
-									pocty[0] = result.features.length;
+									pocty[5] = result.features.length;
 
 									// KAMIL: Uložení grafik do skladu a přiřazení speciálního id, 
 									// pomocí kterého pak budeš filtrovat vrstvy pro nastavení speciálního popup
 									result.features.forEach((graphic) => {
 										graphic.customId = opravy.title;
-										graphics_list.push(graphic)
+										temp_g_list.push(graphic)
 									})
 
 									planovane_odstavky.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
-										pocty[1] = result.features.length;
+										pocty[6] = result.features.length;
 										result.features.forEach((graphic) => {
 											graphic.customId = planovane_odstavky.title;
-											graphics_list.push(graphic)
+											temp_g_list.push(graphic)
 										})
 
 										odkaleni_hydrantu.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
-											pocty[2] = result.features.length;
+											pocty[7] = result.features.length;
 											result.features.forEach((graphic) => {
 												graphic.customId = odkaleni_hydrantu.title;
-												graphics_list.push(graphic)
+												temp_g_list.push(graphic)
 											})
 
 											info_obcany.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
-												pocty[3] = result.features.length;
+												pocty[8] = result.features.length;
 												result.features.forEach((graphic) => {
 													graphic.customId = info_obcany.title;
-													graphics_list.push(graphic)
+													temp_g_list.push(graphic)
 												})
 												
 												opravy_ukoncene.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
-													pocty[4] = result.features.length;
+													pocty[9] = result.features.length;
 
-													// zoradenie ukoncenych oprav podla datumu zacatia opravy
-													result.features.sort(function(a, b){
-														let x = a.attributes.oprava_zahajeni;
-														if (a.attributes.oprava_zahajeni === null) {
-															x = a.attributes.opravda_ukonceni;
-														}
-														let y = b.attributes.oprava_zahajeni;
-														if (b.attributes.oprava_zahajeni === null) {
-															y = b.attributes.opravda_ukonceni;
-														}
-														if (x < y) {return 1;}
-														if (x > y) {return -1;}
-														if (x === y && a.attributes.opravda_ukonceni < b.attributes.opravda_ukonceni) {return 1;}
-														return 0;
-													}); 
+													if (pocty[5]!=pocty[0] || pocty[6]!=pocty[1] || pocty[7]!=pocty[2] || pocty[8]!=pocty[3] || pocty[9]!=pocty[4]){
+														pocty[0] = pocty[5];
+														pocty[1] = pocty[6];
+														pocty[2] = pocty[7];
+														pocty[3] = pocty[8];
+														pocty[4] = pocty[9];
+
+														// zoradenie ukoncenych oprav podla datumu zacatia opravy
+														result.features.sort(function(a, b){
+															let x = a.attributes.oprava_zahajeni;
+															if (a.attributes.oprava_zahajeni === null) {
+																x = a.attributes.opravda_ukonceni;
+															}
+															let y = b.attributes.oprava_zahajeni;
+															if (b.attributes.oprava_zahajeni === null) {
+																y = b.attributes.opravda_ukonceni;
+															}
+															if (x < y) {return 1;}
+															if (x > y) {return -1;}
+															if (x === y && a.attributes.opravda_ukonceni < b.attributes.opravda_ukonceni) {return 1;}
+															return 0;
+														}); 
+														
+														result.features.forEach((graphic) => {
+															graphic.customId = opravy_ukoncene.title;
+															temp_g_list.push(graphic)
+														})
+
+														graphics_list = temp_g_list;
+														document.getElementById("demo1").innerHTML = "data changed";
+
+														if (ukonc_clicked === false) {
+															pocitadlo.iconNumber = pocty[0] + pocty[1] + pocty[2] + pocty[3];								
 													
-													result.features.forEach((graphic) => {
-														graphic.customId = opravy_ukoncene.title;
-														graphics_list.push(graphic)
-													})
+															counter_node.innerHTML = `<div class="counterDiv">
+																					<div class="pocitadlo">Počet oprav: <h2>${pocty[0]}</h2></div>
+																					<div class="pocitadlo">Další události: <h2>${(pocty[1] + pocty[3])}</h2></div> 
+																					<div class="pocitadlo">Odkalení hydrantů: <h2> ${pocty[2]}</h2></div>
+																				</div>`
 
-													if (ukonc_clicked === false) {
-														pocitadlo.iconNumber = pocty[0] + pocty[1] + pocty[2] + pocty[3];								
+															if (pocty[0] + pocty[1] + pocty[2] + pocty[3] === 0) {
+																feature_list_node.innerHTML = "<p>žádné aktuální události</p>";
+															} else {
+																feature_list_node.innerHTML = '';
+																graphics_list.forEach((graphic) => {
+																	let graphic_clone_for_panel = graphic.clone();
+																	if (graphic.customId === opravy.title) {
+																		graphic_clone_for_panel.popupTemplate = {
+																			title: "", 
+																			content: createContentForOpravy
+																		};
+																	}
+																	if (graphic.customId === planovane_odstavky.title) {
+																		graphic_clone_for_panel.popupTemplate = {
+																			title: "", 
+																			content: createContentForOdstavky
+																		};
+																	}
+																	if (graphic.customId === info_obcany.title) {
+																		graphic_clone_for_panel.popupTemplate = {
+																			title: "", 
+																			content: createContentForInfo
+																		};
+																	}
+																	if (graphic.customId === odkaleni_hydrantu.title) {
+																		graphic_clone_for_panel.popupTemplate = {
+																			title: "", 
+																			content: createContentForOdkaleni
+																		};
+																	}
 												
-														counter_node.innerHTML = `<div class="counterDiv">
-																				<div class="pocitadlo">Počet oprav: <h2>${pocty[0]}</h2></div>
-																				<div class="pocitadlo">Další události: <h2>${(pocty[1] + pocty[3])}</h2></div> 
-																				<div class="pocitadlo">Odkalení hydrantů: <h2> ${pocty[2]}</h2></div>
-																			</div>`
-
-														if (pocty[0] + pocty[1] + pocty[2] + pocty[3] === 0) {
-															feature_list_node.innerHTML = "<p>žádné aktuální události</p>";
-														} else {
-															feature_list_node.innerHTML = '';
-															graphics_list.forEach((graphic) => {
-																let graphic_clone_for_panel = graphic.clone();
-																if (graphic.customId === opravy.title) {
-																	graphic_clone_for_panel.popupTemplate = {
-																		title: "", 
-																		content: createContentForOpravy
-																	};
-																}
-																if (graphic.customId === planovane_odstavky.title) {
-																	graphic_clone_for_panel.popupTemplate = {
-																		title: "", 
-																		content: createContentForOdstavky
-																	};
-																}
-																if (graphic.customId === info_obcany.title) {
-																	graphic_clone_for_panel.popupTemplate = {
-																		title: "", 
-																		content: createContentForInfo
-																	};
-																}
-																if (graphic.customId === odkaleni_hydrantu.title) {
-																	graphic_clone_for_panel.popupTemplate = {
-																		title: "", 
-																		content: createContentForOdkaleni
-																	};
-																}
-											
-																let featureChild = new Feature({
-																	container: document.createElement("div"),
-																	graphic: graphic_clone_for_panel, // Speciální popup
-																	map: view.map,
-																	spatialReference: view.spatialReference
-																});
-																featureChild.container.addEventListener("click", function(){
-																	panel_click(graphic);
+																	let featureChild = new Feature({
+																		container: document.createElement("div"),
+																		graphic: graphic_clone_for_panel, // Speciální popup
+																		map: view.map,
+																		spatialReference: view.spatialReference
+																	});
+																	featureChild.container.addEventListener("click", function(){
+																		panel_click(graphic);
+																	})
+																	if (graphic.customId != opravy_ukoncene.title) {
+																		feature_list_node.appendChild(featureChild.container)
+																	}
 																})
-																if (graphic.customId != opravy_ukoncene.title) {
-																	feature_list_node.appendChild(featureChild.container)
-																}
-															})
+															}
+														} else {
+															opravy_uk_panel();
 														}
 													}
 												});
