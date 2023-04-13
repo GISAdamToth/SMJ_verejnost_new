@@ -19,6 +19,8 @@
 				//setTimeout("location.reload(true);", 20000);
 				
 				var ukonc_clicked = false;
+				var pocitadlo, counter_node, feature_list_node;
+
 				require([
 					"esri/Map",
 					"esri/views/MapView",
@@ -94,7 +96,7 @@
 								position: "bottom-left"
 							}
 						},
-						center: [15.585, 49.403],
+						center: [15.6, 49.403],
 						zoom: 3,
 
 						// definovanie zoom levelov, tzv. LODs (levels of detail), pre toto view je ich definovanych 18 (0-17)
@@ -239,7 +241,212 @@
 						// mapová služba a její vrstvy jsou v mapě evidovány pod ID, viz e-mail
 
 						// Mapová služba
-						var main_service = webmap.findLayerById(config.service_udalosti.id); 
+						var main_service = webmap.findLayerById(config.service_udalosti.id);
+						/* document.getElementById("demo").innerHTML = "default state";
+						document.getElementById("demo1").innerHTML = "waiting for data change";
+						let h = 0;
+						let g = 0; */
+						// nastavenie refreshIntervalu na jednu minutu): kazdu minutu sa spusti event refresh
+						main_service.refreshInterval = 1;
+
+						// funkcia eventu refresh, spustana kazdych 6 sekund
+						main_service.on("refresh", function(event){
+							// bohuzial, event.dataChanged nehovori nic o zmene dat, tato podmienka je splnena zakazdym, takze vzdy, ked sa spusti funkcia refresh eventu
+							if (event.dataChanged){
+								/* h = h+1;
+								document.getElementById("demo").innerHTML = "refresh interval triggered refresh event " + h; */
+
+								// temp_g_list je ekvivalent ku graphics_listu, pocty[5,6,7,8,9] su ekvivalentom k poctom[0,1,2,3,4]
+								temp_g_list = [];
+								opravy.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
+									pocty[5] = result.features.length;
+									result.features.forEach((graphic) => {
+										graphic.customId = opravy.title;
+										temp_g_list.push(graphic)
+									})
+
+									planovane_odstavky.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
+										pocty[6] = result.features.length;
+										result.features.forEach((graphic) => {
+											graphic.customId = planovane_odstavky.title;
+											temp_g_list.push(graphic)
+										})
+
+										odkaleni_hydrantu.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
+											pocty[7] = result.features.length;
+											result.features.forEach((graphic) => {
+												graphic.customId = odkaleni_hydrantu.title;
+												temp_g_list.push(graphic)
+											})
+
+											info_obcany.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
+												pocty[8] = result.features.length;
+												result.features.forEach((graphic) => {
+													graphic.customId = info_obcany.title;
+													temp_g_list.push(graphic)
+												})
+												
+												opravy_ukoncene.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
+													pocty[9] = result.features.length;
+
+													//document.getElementById("demo1").innerHTML = pocty;
+
+													// ak sa udiala akákoľvek zmena, tj. ak bola pridana alebo odobrana akakolvek udalost, 
+													// tak potom pocty [0-4] napln poctami [5-9], zorad ukoncene opravy a pridaj ich do temp_g_listu
+													// a nakoniec graphics_list napln temp_g_listom
+													if (pocty[5]!=pocty[0] || pocty[6]!=pocty[1] || pocty[7]!=pocty[2] || pocty[8]!=pocty[3] || pocty[9]!=pocty[4]){
+														pocty[0] = pocty[5];
+														pocty[1] = pocty[6];
+														pocty[2] = pocty[7];
+														pocty[3] = pocty[8];
+														pocty[4] = pocty[9];
+
+														// zoradenie ukoncenych oprav podla datumu zacatia opravy
+														result.features.sort(function(a, b){
+															let x = a.attributes.oprava_zahajeni;
+															if (a.attributes.oprava_zahajeni === null) {
+																x = a.attributes.opravda_ukonceni;
+															}
+															let y = b.attributes.oprava_zahajeni;
+															if (b.attributes.oprava_zahajeni === null) {
+																y = b.attributes.opravda_ukonceni;
+															}
+															if (x < y) {return 1;}
+															if (x > y) {return -1;}
+															if (x === y && a.attributes.opravda_ukonceni < b.attributes.opravda_ukonceni) {return 1;}
+															return 0;
+														}); 
+														
+														result.features.forEach((graphic) => {
+															graphic.customId = opravy_ukoncene.title;
+															temp_g_list.push(graphic)
+														})
+
+														graphics_list = temp_g_list;
+														/* g = g+1
+														document.getElementById("demo1").innerHTML = "data changed " + g; */
+
+														// ak su v zozname aktualne udalosti, aktualizuj pocitadlo a zoznam aktualnych udalosti
+														if (ukonc_clicked === false) {
+															pocitadlo.iconNumber = pocty[0] + pocty[1] + pocty[2] + pocty[3];								
+													
+															counter_node.innerHTML = `<div class="counterDiv">
+																					<div class="pocitadlo">Počet oprav: <h2>${pocty[0]}</h2></div>
+																					<div class="pocitadlo">Další události: <h2>${(pocty[1] + pocty[3])}</h2></div> 
+																					<div class="pocitadlo">Odkalení hydrantů: <h2> ${pocty[2]}</h2></div>
+																				</div>`
+
+															if (pocty[0] + pocty[1] + pocty[2] + pocty[3] === 0) {
+																feature_list_node.innerHTML = "<p>žádné aktuální události</p>";
+															} else {
+																feature_list_node.innerHTML = '';
+																graphics_list.forEach((graphic) => {
+																	let graphic_clone_for_panel = graphic.clone();
+																	if (graphic.customId === opravy.title) {
+																		graphic_clone_for_panel.popupTemplate = {
+																			title: "", 
+																			content: createContentForOpravy
+																		};
+																	}
+																	if (graphic.customId === planovane_odstavky.title) {
+																		graphic_clone_for_panel.popupTemplate = {
+																			title: "", 
+																			content: createContentForOdstavky
+																		};
+																	}
+																	if (graphic.customId === info_obcany.title) {
+																		graphic_clone_for_panel.popupTemplate = {
+																			title: "", 
+																			content: createContentForInfo
+																		};
+																	}
+																	if (graphic.customId === odkaleni_hydrantu.title) {
+																		graphic_clone_for_panel.popupTemplate = {
+																			title: "", 
+																			content: createContentForOdkaleni
+																		};
+																	}
+												
+																	let featureChild = new Feature({
+																		container: document.createElement("div"),
+																		graphic: graphic_clone_for_panel, // Speciální popup
+																		map: view.map,
+																		spatialReference: view.spatialReference
+																	});
+																	featureChild.container.addEventListener("click", function(){
+																		panel_click(graphic);
+																	})
+																	if (graphic.customId != opravy_ukoncene.title) {
+																		feature_list_node.appendChild(featureChild.container)
+																	}
+																})
+															}
+														// ak su v zozname ukoncene opravy, aktualizuj pocitadlo a zoznam ukoncenych oprav
+														} else {
+															opravy_uk_panel();
+														}
+													}
+												});
+											});
+										});
+									});
+								});
+							}
+						});
+
+						// funkcia pouzivana vo 'featureChild.container.addEventListener("click" ...)'
+						// po kliknuti na udalost v zozname sa mapa prizoomuje a vycentruje na kliknutu udalost
+						function panel_click(g) {
+							view
+								.goTo({center: g.geometry, zoom: 9})
+								.then(function() {
+									view.popup.open({
+										features: [g], // Původní grafika s původním popup
+										location: g.geometry.centroid
+									});
+								})
+
+							// ak je mapa otvorena na mobile, tak po kliknuti na udalost v zozname sa bocny panel zbali
+							let sirka = window.innerWidth;
+							if (sirka < 545) {
+								pocitadlo.collapse();
+							}
+						}
+
+						// funkcia, ktora do bocneho panelu prida ukoncene opravy, ale iba tie, ktore su prave viditelne v mape
+						// dalej tieto opravy spocita a tento pocet nahra do pocitadla a do maleho ciselka pri zbalenom paneli
+						function opravy_uk_panel() {
+							feature_list_node.innerHTML = '';
+							let aktualny_pocet;
+							aktualny_pocet = 0;
+							graphics_list.forEach((graphic) => {
+								let graphic_clone_for_panel = graphic.clone();
+								if (graphic.customId === opravy_ukoncene.title) {
+									graphic_clone_for_panel.popupTemplate = {
+										title: "", 
+										content: createContentForOpravyUk
+									};
+								}
+								let featureChild = new Feature({
+									container: document.createElement("div"),
+									graphic: graphic_clone_for_panel, // Speciální popup
+									map: view.map,
+									spatialReference: view.spatialReference
+								});
+								featureChild.container.addEventListener("click", function(){
+									panel_click(graphic);
+								})
+								var extent = view.extent;
+								if (graphic.customId === opravy_ukoncene.title && extent.contains(graphic.geometry)) {
+									feature_list_node.appendChild(featureChild.container)
+									aktualny_pocet = aktualny_pocet + 1
+								}
+							})
+							counter_node.innerHTML = `<div class="counterDiv">
+													<div class="pocitadlo1">Ukončené opravy (viditelné): <h2> ${aktualny_pocet}</h2></div> 
+												</div>`
+							pocitadlo.iconNumber = aktualny_pocet;
+						}
 					
 						// ... a pak k vrstvám mapové služby
 
@@ -432,8 +639,6 @@
 						webmap.add(opravy_ukoncene);
 						
 						
-						var pocty = [];
-						
 						// KAMIL: Tím, že pracuješ se sublayers, nemůžeš použít metodu queryFeatureCount() , ale můžeš to vyřešit
 						// třeba takto - jednoduché query na vrstvu, ktetým si necháš vrátit všechny prvky
 
@@ -447,7 +652,9 @@
 						// Opět, jde to udělat i elegantněji - mrkni na koncept promise, ale pro tyhle účely jsem to nechal takto. 
 
 						// KAMIL: Sklad grafik pro Feature widget (boční výpis)
-						let graphics_list = []
+						var graphics_list = [];
+						var pocty = [];
+
 						opravy.queryFeatures({returnGeometry: true, where: "1=1", outFields: ["*"]}).then(function(result){
 							pocty[0] = result.features.length;
 
@@ -502,41 +709,9 @@
 												graphic.customId = opravy_ukoncene.title;
 												graphics_list.push(graphic)
 											})
-										
-											// funkcia pouzivana vo 'featureChild.container.addEventListener("click" ...)'
-											// po kliknuti na udalost v zozname sa mapa prizoomuje a vycentruje na kliknutu udalost
-											function panel_click(g) {
-												// ak je zoom level mensi ako 9 alebo vacsi rovny 13, mapa sa prizoomuje na level 9
-												if (view.zoom < 9 || view.zoom >= 13){
-													view
-														.goTo({center: g.geometry, zoom: 9})
-														.then(function() {
-															view.popup.open({
-																features: [g], // Původní grafika s původním popup
-																location: g.geometry.centroid
-															});
-														})
-												// ak je vsak zoom vacsi rovny 9 a zaroven mensi ako 13, mapa sa bude zoomovat vzdy o 1 level blizsie
-												} else if (view.zoom < 13){
-													view
-														.goTo({center: g.geometry, zoom: view.zoom + 1})
-														.then(function() {
-															view.popup.open({
-																features: [g], // Původní grafika s původním popup
-																location: g.geometry.centroid
-															});
-														})
-												}
-
-												// ak je mapa otvorena na mobile, tak po kliknuti na udalost v zozname sa bocny panel zbali
-												let sirka = window.innerWidth;
-												if (sirka < 545) {
-													pocitadlo.collapse();
-												}
-											}
 
 											//vytvorenie pocitadla
-											let feature_list_node = document.createElement("div");
+											feature_list_node = document.createElement("div");
 											if (pocty[0] + pocty[1] + pocty[2] + pocty[3] === 0) {
 												feature_list_node.innerHTML = "<p>žádné aktuální události</p>";
 											} else {
@@ -598,7 +773,7 @@
 											}
 
 											// counter_node je cast s pocitadlom
-											let counter_node = document.createElement("div");
+											counter_node = document.createElement("div");
 											counter_node.innerHTML = `<div class="counterDiv">
 																		<div class="pocitadlo">Počet oprav: <h2>${pocty[0]}</h2></div>
 																		<div class="pocitadlo">Další události: <h2>${(pocty[1] + pocty[3])}</h2></div> 
@@ -611,40 +786,7 @@
 											let buttonChild1 = document.createElement("div");
 											let buttonChild2 = document.createElement("div");
 
-											// funkcia, ktora do bocneho panelu prida ukoncene opravy, ale iba tie, ktore su prave viditelne v mape
-											// dalej tieto opravy spocita a tento pocet nahra do pocitadla a do maleho ciselka pri zbalenom paneli
-											function opravy_uk_panel() {
-												feature_list_node.innerHTML = '';
-												let aktualny_pocet;
-												aktualny_pocet = 0;
-												graphics_list.forEach((graphic) => {
-													let graphic_clone_for_panel = graphic.clone();
-													if (graphic.customId === opravy_ukoncene.title) {
-														graphic_clone_for_panel.popupTemplate = {
-															title: "", 
-															content: createContentForOpravyUk
-														};
-													}
-													let featureChild = new Feature({
-														container: document.createElement("div"),
-														graphic: graphic_clone_for_panel, // Speciální popup
-														map: view.map,
-														spatialReference: view.spatialReference
-													});
-													featureChild.container.addEventListener("click", function(){
-														panel_click(graphic);
-													})
-													var extent = view.extent;
-													if (graphic.customId === opravy_ukoncene.title && extent.contains(graphic.geometry)) {
-														feature_list_node.appendChild(featureChild.container)
-														aktualny_pocet = aktualny_pocet + 1
-													}
-												})
-												counter_node.innerHTML = `<div class="counterDiv">
-																		<div class="pocitadlo1">Ukončené opravy (viditelné): <h2> ${aktualny_pocet}</h2></div> 
-																	</div>`
-												pocitadlo.iconNumber = aktualny_pocet;
-											}
+											
 
 											// mam to trosku nelogicky spravene, buttonChild1 su ukoncene opravy a buttonChild2 su aktualne opravy, v mape je to vsak naopak (zlava su prve aktualne, az potom ukoncene)
 											buttonChild1.innerHTML = "<button class='buttons'>Ukončené opravy</button>";
@@ -769,7 +911,7 @@
 											suma = pocty[0] + pocty[1] + pocty[2] + pocty[3];
 											
 											// definovanie celeho bocneho panela s pocitadlom, buttonmi aj zoznamom (content: expand_node)
-											const pocitadlo = new Expand({
+											pocitadlo = new Expand({
 												id: "panel",
 												view: view,
 												expanded: bool,
@@ -806,13 +948,12 @@
 								});
 							});
 						});
-					
+						
 
 						// KAMIL: V této sekci máš vytvořené funkce pro vytvoření contentu výpisů v bočním panelu, tyto je potřeba dopracovat
 						// Pro každou vrstvu samostatná funkce
 						// Funkce se spuští v nastavení popup pro klon grafiky - viz výše
 						function vypis(atrb, id_udalosti) {
-
 							let adresy_ulice;
 
 							//adresy_ulice = atrb.oprava_adresy_omezene + "<br> porucha misto: " + atrb.porucha_misto;
@@ -869,9 +1010,10 @@
 								adresy_ulice = adresy_ulice.replace("Jihlava", "neuvedena");
 							}
 
-							// tu sa kod funkcie vypis deli na dve casti podla typu udalosti (id_udalosti)
-							// prva je pre ukoncene opravy, kde je vypis v zozname trochu iny ako pre opravy, info pre obcanov a planovane odstavky
-							// kod pre tieto 3 udalosti je vo vetve else
+							// tu sa kod funkcie vypis deli na 3 casti podla typu udalosti (id_udalosti)
+							// prva je pre ukoncene opravy, druha je pre planovane odstavky a tretia je pre ostatne udalosti
+
+							// ukoncene opravy potrebuju iba datum (den.mesiac.rok) bez casu
 							if (id_udalosti == "opr_uk"){
 								let zaciatok;
 								if (atrb.oprava_zahajeni === null && atrb.opravda_ukonceni === null) {
@@ -899,37 +1041,169 @@
 								}
 								return(adresy_ulice + '<br> datum: ' + zaciatok);
 
-							} else {
-								// ulozenie datumov (den, mesiac, rok) do stringov
-								var startDatume = new Date(atrb.oprava_zahajeni);
-								var endDatume = new Date(atrb.opravda_ukonceni);
-								let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
-								let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
-							
-								// ulozenie minut do stringov
-								let sminuty = startDatume.getMinutes();
-								sminuty_text = sminuty.toString();
-								if (sminuty_text.length == 1) {
-									sminuty_text = "0" + sminuty_text;
+							// planovane odstavky primarne cerpaju datum a cas z atributu oprava_odstavka_od/do
+							} else if (id_udalosti == "odst"){ 
+								let zaciatok;
+								
+								// ak nie je nic vyplnene v odstavke, tak sa zoberie datum a cas z opravy, ak vsak ani tam nic nie je, napise sa datum neuvedeno
+								if (atrb.oprava_odstavka_od === null && atrb.oprava_odstavka_do === null) {
+									if (atrb.oprava_zahajeni != null && atrb.opravda_ukonceni != null) {
+										let startDatume = new Date(atrb.oprava_zahajeni);
+										let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+										let endDatume = new Date(atrb.opravda_ukonceni);
+										let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+										
+										let sminuty = startDatume.getMinutes();
+										sminuty_text = sminuty.toString();
+										if (sminuty_text.length == 1) {
+											sminuty_text = "0" + sminuty_text;
+										}
+										let eminuty = endDatume.getMinutes();
+										eminuty_text = eminuty.toString();
+										if (eminuty_text.length == 1) {
+											eminuty_text = "0" + eminuty_text;
+										}
+
+										if (prvy_den === posledny_den) {
+											zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text + "-" + endDatume.getHours() + ":" + eminuty_text;
+										} else {
+											zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text + " - " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+										}
+									} else {
+										zaciatok = "neuvedeno";
+									}
 								}
-								let eminuty = endDatume.getMinutes();
-								eminuty_text = eminuty.toString();
-								if (eminuty_text.length == 1) {
-									eminuty_text = "0" + eminuty_text;
+								if (atrb.oprava_odstavka_od != null && atrb.oprava_odstavka_do === null) {
+									let startDatume = new Date(atrb.oprava_odstavka_od);
+									let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+									
+									let sminuty = startDatume.getMinutes();
+									sminuty_text = sminuty.toString();
+									if (sminuty_text.length == 1) {
+										sminuty_text = "0" + sminuty_text;
+									}
+
+									zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
+								}
+								if (atrb.oprava_odstavka_od === null && atrb.oprava_odstavka_do != null) {
+									let endDatume = new Date(atrb.oprava_odstavka_do);
+									let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+									
+									let eminuty = endDatume.getMinutes();
+									eminuty_text = eminuty.toString();
+									if (eminuty_text.length == 1) {
+										eminuty_text = "0" + eminuty_text;
+									}
+
+									zaciatok = posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+								}
+								if (atrb.oprava_odstavka_od != null && atrb.oprava_odstavka_do != null) {
+									let startDatume = new Date(atrb.oprava_odstavka_od);
+									let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+									let endDatume = new Date(atrb.oprava_odstavka_do);
+									let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+									
+									let sminuty = startDatume.getMinutes();
+									sminuty_text = sminuty.toString();
+									if (sminuty_text.length == 1) {
+										sminuty_text = "0" + sminuty_text;
+									}
+									let eminuty = endDatume.getMinutes();
+									eminuty_text = eminuty.toString();
+									if (eminuty_text.length == 1) {
+										eminuty_text = "0" + eminuty_text;
+									}
+
+									if (prvy_den === posledny_den) {
+										zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text + "-" + endDatume.getHours() + ":" + eminuty_text;
+									} else {
+										zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text + " - " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+									}
 								}
 
-								// skladanie stringov pre vypis, zaciatocny cas je vzdy ten isty (den, mesiac, rok, hodiny, minuty)
-								let zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
-								let ukoncenie;
-								// ak je udalost ukoncena v ten isty den, vypis casu bude v tomto tvare: den, mesiac, rok, zaciatocne hodiny a minuty - konecne hodiny a minuty
-								// v opacnom pripade je vypis casu v tomto tvare: zaciatocny den, mesiac, rok, hodiny a minuty - konecny den, mesiac, rok, hodiny a minuty
-								if (prvy_den === posledny_den) {
-									ukoncenie = endDatume.getHours() + ":" + eminuty_text;
-								} else {
-									ukoncenie = " " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
-									zaciatok = zaciatok + " ";
+								return(adresy_ulice + '<br> čas: ' + zaciatok);
+
+							// ostatne udalosti primarne cerpaju datum a cas z atributu oprava_zahajeni/opravda_ukonceni
+							} else {
+								let zaciatok;
+
+								// ak nie je nic vyplnene v oprave, tak sa zoberie datum a cas z odstavky, ak vsak ani tam nic nie je, napise sa datum neuvedeno
+								if (atrb.oprava_zahajeni === null && atrb.opravda_ukonceni === null) {
+									if (atrb.oprava_odstavka_od != null && atrb.oprava_odstavka_do != null) {
+										let startDatume = new Date(atrb.oprava_odstavka_od);
+										let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+										let endDatume = new Date(atrb.oprava_odstavka_do);
+										let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+										
+										let sminuty = startDatume.getMinutes();
+										sminuty_text = sminuty.toString();
+										if (sminuty_text.length == 1) {
+											sminuty_text = "0" + sminuty_text;
+										}
+										let eminuty = endDatume.getMinutes();
+										eminuty_text = eminuty.toString();
+										if (eminuty_text.length == 1) {
+											eminuty_text = "0" + eminuty_text;
+										}
+
+										if (prvy_den === posledny_den) {
+											zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text + "-" + endDatume.getHours() + ":" + eminuty_text;
+										} else {
+											zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text + " - " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+										}
+									} else {
+										zaciatok = "neuvedeno";
+									}
 								}
-								return(adresy_ulice + '<br> čas: ' + zaciatok + '-' + ukoncenie);
+								if (atrb.oprava_zahajeni != null && atrb.opravda_ukonceni === null) {
+									let startDatume = new Date(atrb.oprava_zahajeni);
+									let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+									
+									let sminuty = startDatume.getMinutes();
+									sminuty_text = sminuty.toString();
+									if (sminuty_text.length == 1) {
+										sminuty_text = "0" + sminuty_text;
+									}
+
+									zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text;
+								}
+								if (atrb.oprava_zahajeni === null && atrb.opravda_ukonceni != null) {
+									let endDatume = new Date(atrb.opravda_ukonceni);
+									let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+									
+									let eminuty = endDatume.getMinutes();
+									eminuty_text = eminuty.toString();
+									if (eminuty_text.length == 1) {
+										eminuty_text = "0" + eminuty_text;
+									}
+
+									zaciatok = posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+								}
+								if (atrb.oprava_zahajeni != null && atrb.opravda_ukonceni != null) {
+									let startDatume = new Date(atrb.oprava_zahajeni);
+									let prvy_den = startDatume.getDate() + "." + (startDatume.getMonth()+1) + "." + startDatume.getFullYear();
+									let endDatume = new Date(atrb.opravda_ukonceni);
+									let posledny_den = endDatume.getDate() + "." + (endDatume.getMonth()+1) + "." + endDatume.getFullYear();
+									
+									let sminuty = startDatume.getMinutes();
+									sminuty_text = sminuty.toString();
+									if (sminuty_text.length == 1) {
+										sminuty_text = "0" + sminuty_text;
+									}
+									let eminuty = endDatume.getMinutes();
+									eminuty_text = eminuty.toString();
+									if (eminuty_text.length == 1) {
+										eminuty_text = "0" + eminuty_text;
+									}
+
+									if (prvy_den === posledny_den) {
+										zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text + "-" + endDatume.getHours() + ":" + eminuty_text;
+									} else {
+										zaciatok = prvy_den + " " + startDatume.getHours() + ":" + sminuty_text + " - " + posledny_den + " " + endDatume.getHours() + ":" + eminuty_text;
+									}
+								}
+
+								return(adresy_ulice + '<br> čas: ' + zaciatok);
 							}
 						}
 
